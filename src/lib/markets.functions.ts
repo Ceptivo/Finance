@@ -1,21 +1,10 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { aiPrompt, parseJsonReply } from "./ai.server";
+import { getQuote, getQuotes, getHistory } from "./market-data.server";
 
-/* ---------------- Finnhub live quotes ---------------- */
-
-type Quote = {
-  symbol: string;
-  label: string;
-  price: number;
-  change: number;
-  changePct: number;
-  high: number;
-  low: number;
-  prevClose: number;
-};
+/* ---------------- Live quotes (Yahoo Finance, no API key needed) ---------------- */
 
 const DEFAULT_SYMBOLS: Array<{ symbol: string; label: string; category: string }> = [
   { symbol: "SPY", label: "S&P 500", category: "Index" },
@@ -25,44 +14,12 @@ const DEFAULT_SYMBOLS: Array<{ symbol: string; label: string; category: string }
   { symbol: "VTI", label: "US Total Market", category: "ETF" },
   { symbol: "VXUS", label: "International Stocks", category: "ETF" },
   { symbol: "GLD", label: "Gold", category: "Commodity" },
-  { symbol: "TLT", label: "20Y Treasuries", category: "Bond" },
+  { symbol: "BTC-USD", label: "Bitcoin", category: "Crypto" },
 ];
-
-async function fetchQuote(symbol: string, key: string): Promise<Omit<Quote, "label"> | null> {
-  try {
-    const res = await fetch(
-      `https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(symbol)}&token=${key}`,
-      { signal: AbortSignal.timeout(8000) },
-    );
-    if (!res.ok) return null;
-    const j = (await res.json()) as { c: number; d: number; dp: number; h: number; l: number; pc: number };
-    if (!j || typeof j.c !== "number" || j.c === 0) return null;
-    return {
-      symbol,
-      price: j.c,
-      change: j.d ?? 0,
-      changePct: j.dp ?? 0,
-      high: j.h ?? 0,
-      low: j.l ?? 0,
-      prevClose: j.pc ?? 0,
-    };
-  } catch {
-    return null;
-  }
-}
 
 export const getLiveMarkets = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const key = process.env.FINNHUB_API_KEY;
-    if (!key) {
-      return {
-        quotes: [] as Array<Quote & { category: string; custom?: boolean; invested?: number; valueNow?: number; pl?: number; plPct?: number; baseline?: number; customId?: string }>,
-        error: "Finnhub API key not configured.",
-        fetchedAt: new Date().toISOString(),
-      };
-    }
-
     const { supabase, userId } = context;
     const { data: customRows } = await supabase
       .from("custom_markets" as never)
@@ -71,7 +28,10 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
     const customs = (customRows ?? []) as any[];
 
     const seen = new Set<string>();
-    const all: Array<{ symbol: string; label: string; category: string; custom?: boolean; invested?: number; baseline?: number | null; customId?: string }> = [];
+    const all: Array<{
+      symbol: string; label: string; category: string;
+      custom?: boolean; invested?: number; baseline?: number | null; customId?: string;
+    }> = [];
     for (const d of DEFAULT_SYMBOLS) { all.push(d); seen.add(d.symbol); }
     for (const c of customs) {
       if (seen.has(c.symbol)) continue;
@@ -87,9 +47,10 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
       });
     }
 
-    const settled = await Promise.all(
-      all.map(async (s) => {
-        const q = await fetchQuote(s.symbol, key);
+    const quoteMap = await getQuotes(all.map((s) => s.symbol));
+    const quotes = all
+      .map((s) => {
+        const q = quoteMap.get(s.symbol);
         if (!q) return null;
         const enriched: any = { ...q, label: s.label, category: s.category };
         if (s.custom) {
@@ -105,24 +66,131 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
           }
         }
         return enriched;
-      }),
-    );
+      })
+      .filter((x): x is any => x !== null);
 
-    const quotes = settled.filter((x): x is any => x !== null);
     return {
       quotes,
-      error: quotes.length === 0 ? "No quotes returned. Check API key or try again." : null,
+      error: quotes.length === 0 ? "No quotes returned — markets may be unreachable. Try again." : null,
       fetchedAt: new Date().toISOString(),
     };
   });
 
-/* ---------------- AI investment ideas ---------------- */
+/* ---------------- Price history for charts ---------------- */
 
-function getModel() {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-  return createLovableAiGatewayProvider(key)("google/gemini-2.5-flash");
-}
+export const getMarketHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({
+      symbol: z.string().min(1).max(40),
+      range: z.enum(["1mo", "3mo", "6mo", "1y", "5y"]).default("1y"),
+    }).parse(d),
+  )
+  .handler(async ({ data }) => {
+    const points = await getHistory(data.symbol, data.range);
+    return { symbol: data.symbol, range: data.range, points };
+  });
+
+/**
+ * Real portfolio value over time. Combines:
+ *  - custom markets with invested amounts: invested × (price_t / baseline)
+ *  - holdings with a known symbol and quantity: quantity × price_t
+ *  - holdings without market data: flat at current_value
+ */
+export const getPortfolioHistory = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) =>
+    z.object({ range: z.enum(["1mo", "3mo", "6mo", "1y", "5y"]).default("1y") }).parse(d ?? {}),
+  )
+  .handler(async ({ data, context }) => {
+    const { supabase, userId } = context;
+    const [{ data: holdings }, { data: customs }] = await Promise.all([
+      supabase.from("portfolio_holdings" as never).select("*").eq("user_id", userId),
+      supabase.from("custom_markets" as never).select("*").eq("user_id", userId),
+    ]);
+
+    type Series = { weightAtT: (price: number) => number; points: { t: number; c: number }[] };
+    const series: Series[] = [];
+    let flatValue = 0;
+
+    for (const h of (holdings ?? []) as any[]) {
+      const qty = Number(h.quantity) || 0;
+      const symbol = (h.symbol ?? "").trim();
+      if (symbol && qty > 0) {
+        const points = await getHistory(symbol, data.range);
+        if (points.length > 1) {
+          series.push({ weightAtT: (p) => qty * p, points });
+          continue;
+        }
+      }
+      flatValue += Number(h.current_value) || 0;
+    }
+
+    for (const c of (customs ?? []) as any[]) {
+      const invested = Number(c.invested_amount) || 0;
+      const baseline = Number(c.baseline_price) || 0;
+      if (invested > 0 && baseline > 0 && c.symbol) {
+        const points = await getHistory(c.symbol, data.range);
+        if (points.length > 1) {
+          series.push({ weightAtT: (p) => invested * (p / baseline), points });
+          continue;
+        }
+      }
+      flatValue += invested;
+    }
+
+    if (series.length === 0) {
+      return { points: [] as { date: string; value: number }[], flatValue };
+    }
+
+    // Align on the longest series' timestamps; for each series use the latest
+    // close at or before each timestamp.
+    const master = series.reduce((a, b) => (a.points.length >= b.points.length ? a : b)).points;
+    const points = master.map(({ t }) => {
+      let total = flatValue;
+      for (const s of series) {
+        let close = s.points[0].c;
+        for (const p of s.points) {
+          if (p.t <= t) close = p.c;
+          else break;
+        }
+        total += s.weightAtT(close);
+      }
+      return { date: new Date(t * 1000).toISOString().slice(0, 10), value: Math.round(total * 100) / 100 };
+    });
+
+    return { points, flatValue };
+  });
+
+/* ---------------- Refresh holding values from live prices ---------------- */
+
+export const refreshHoldingValues = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .handler(async ({ context }) => {
+    const { supabase, userId } = context;
+    const { data: holdings } = await supabase
+      .from("portfolio_holdings" as never)
+      .select("id,symbol,quantity")
+      .eq("user_id", userId);
+
+    let updated = 0;
+    for (const h of (holdings ?? []) as any[]) {
+      const qty = Number(h.quantity) || 0;
+      const symbol = (h.symbol ?? "").trim();
+      if (!symbol || qty <= 0) continue;
+      const q = await getQuote(symbol);
+      if (!q) continue;
+      const { error } = await supabase
+        .from("portfolio_holdings" as never)
+        .update({ current_value: Math.round(qty * q.price * 100) / 100 } as never)
+        .eq("id", h.id)
+        .eq("user_id", userId);
+      if (!error) updated++;
+    }
+    return { updated };
+  });
+
+/* ---------------- AI investment ideas (Claude) ---------------- */
 
 export const getInvestmentIdeas = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -154,15 +222,10 @@ Return STRICT JSON only, no prose, no markdown fences:
 
 Important: This is educational content only — never financial advice.`;
 
-    const { text } = await generateText({
-      model: getModel(),
-      prompt,
-    });
-
+    const text = await aiPrompt(prompt);
     let parsed: any;
     try {
-      const cleaned = text.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      parsed = parseJsonReply(text);
     } catch {
       parsed = { ideas: [], marketContext: "AI response could not be parsed. Try refreshing." };
     }

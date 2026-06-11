@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { aiText, imageBlock, pdfBlock, parseJsonReply } from "./ai.server";
 
 const EXPENSE_CATS = [
   "Food","Groceries","Rent","Transport","Utilities","Entertainment",
@@ -51,11 +50,8 @@ export const uploadStatement = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => UploadInput.parse(d))
   .handler(async ({ data, context }) => {
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
-    const model = createLovableAiGatewayProvider(key)("google/gemini-2.5-flash");
-
     const isPdf = data.mimeType.includes("pdf");
+    const isText = /^text\/|csv|json/.test(data.mimeType);
     const systemPrompt = `You are a bank statement parser. Extract structured data from the statement and reply ONLY with minified valid JSON (no prose, no code fences).
 
 Schema:
@@ -72,26 +68,30 @@ Schema:
 
 Rules: amounts always positive numbers, classify income vs expense correctly, identify recurring charges as subscriptions, infer reasonable categories.`;
 
-    const { text } = await generateText({
-      model,
+    const text = await aiText({
+      system: systemPrompt,
+      maxTokens: 64000,
       messages: [
-        { role: "system", content: systemPrompt },
         {
           role: "user",
-          content: [
-            { type: "text", text: "Parse this bank statement." },
-            isPdf
-              ? { type: "file", data: data.base64, mediaType: data.mimeType } as any
-              : { type: "image", image: `data:${data.mimeType};base64,${data.base64}` } as any,
-          ],
+          content: isText
+            ? [
+                {
+                  type: "text",
+                  text: `Parse this bank statement (raw ${data.mimeType} content):\n\n${Buffer.from(data.base64, "base64").toString("utf-8").slice(0, 400_000)}`,
+                },
+              ]
+            : [
+                { type: "text", text: "Parse this bank statement." },
+                isPdf ? pdfBlock(data.base64) : imageBlock(data.base64, data.mimeType),
+              ],
         },
       ],
     });
 
     let parsed: ParsedStatement;
     try {
-      const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```\s*$/i, "").trim();
-      parsed = ParsedSchema.parse(JSON.parse(cleaned));
+      parsed = ParsedSchema.parse(parseJsonReply(text));
     } catch (e) {
       throw new Error("Could not parse statement. Try a clearer file.");
     }

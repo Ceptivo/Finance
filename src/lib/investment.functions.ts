@@ -1,14 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText, Output } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
-
-function getModel() {
-  const key = process.env.LOVABLE_API_KEY;
-  if (!key) throw new Error("Missing LOVABLE_API_KEY");
-  return createLovableAiGatewayProvider(key)("google/gemini-3-flash-preview");
-}
+import { aiText, aiPrompt, parseJsonReply } from "./ai.server";
 
 const ProfileSchema = z.object({
   age: z.number().int().min(10).max(120).nullable().optional(),
@@ -95,11 +88,8 @@ export const generateStrategy = createServerFn({ method: "POST" })
       .maybeSingle();
     if (!profile) throw new Error("Complete your investment profile first.");
 
-    const { text } = await generateText({
-      model: getModel(),
-      system:
-        "You are an educational personal-finance assistant. Respond ONLY with valid JSON matching the requested schema. Educational only, not financial advice.",
-      prompt: `Build an investment strategy from this profile JSON: ${JSON.stringify(profile)}.
+    const text = await aiPrompt(
+      `Build an investment strategy from this profile JSON: ${JSON.stringify(profile)}.
 Return JSON with shape:
 {
   "summary": string (2-3 sentences),
@@ -109,12 +99,12 @@ Return JSON with shape:
   "rationale": string
 }
 Use percentages that sum to 100.`,
-    });
+      "You are an educational personal-finance assistant. Respond ONLY with valid JSON matching the requested schema. Educational only, not financial advice.",
+    );
 
     let parsed: any;
     try {
-      const cleaned = text.replace(/```json|```/g, "").trim();
-      parsed = JSON.parse(cleaned);
+      parsed = parseJsonReply(text);
     } catch {
       parsed = { summary: text, monthlyContribution: 0, allocation: [], expectedRisk: "Unknown", rationale: "" };
     }
@@ -208,8 +198,7 @@ USER PROFILE: ${JSON.stringify(profile ?? {})}
 GOALS: ${JSON.stringify(goals ?? [])}
 LATEST HEALTH SCORE: ${JSON.stringify(score ?? {})}`;
 
-    const { text } = await generateText({
-      model: getModel(),
+    const text = await aiText({
       system,
       messages: [
         ...data.history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),

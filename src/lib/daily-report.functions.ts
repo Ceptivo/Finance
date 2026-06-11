@@ -1,7 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { aiText } from "./ai.server";
 
 export const generateDailyReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
@@ -36,24 +35,16 @@ export const generateDailyReport = createServerFn({ method: "POST" })
         .slice(0, 10),
     };
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
-    const model = createLovableAiGatewayProvider(key)("google/gemini-2.5-flash");
-
-    const { text } = await generateText({
-      model,
-      messages: [
-        { role: "system", content:
-          `You are a personal finance coach. Analyze the user's last 30 days. Output in markdown with these sections (use ## headings):
+    const text = await aiText({
+      system: `You are a personal finance coach. Analyze the user's last 30 days. Output in markdown with these sections (use ## headings):
 ## Today's Snapshot
 ## Flags
 ## What you're doing well
 ## What to do differently
 ## 3 concrete actions for today
 
-Keep it concise, specific, friendly, and direct. Use the user's currency-agnostic numbers. Educational only — no regulated financial advice.` },
-        { role: "user", content: `Data: ${JSON.stringify(summary)}` },
-      ],
+Keep it concise, specific, friendly, and direct. Use the user's currency-agnostic numbers. Educational only — no regulated financial advice.`,
+      messages: [{ role: "user", content: `Data: ${JSON.stringify(summary)}` }],
     });
 
     return { report: text, summary };

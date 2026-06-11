@@ -1,8 +1,7 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { generateText } from "ai";
-import { createLovableAiGatewayProvider } from "./ai-gateway.server";
+import { aiPrompt, parseJsonReply } from "./ai.server";
 
 const CoachingSchema = z.object({
   overall_grade: z.string().default("B"),
@@ -44,10 +43,6 @@ export const generateCoachingReport = createServerFn({ method: "POST" })
     if (error) throw new Error(error.message);
     const s = row as any;
 
-    const key = process.env.LOVABLE_API_KEY;
-    if (!key) throw new Error("Missing LOVABLE_API_KEY");
-    const model = createLovableAiGatewayProvider(key)("google/gemini-2.5-flash");
-
     const parsed = s.parsed ?? {};
     const cur = s.currency ?? "USD";
     const ctx = {
@@ -87,11 +82,10 @@ Return STRICT minified JSON only (no prose, no markdown fences) matching:
 
 Be specific with numbers, use the actual currency, no fluff.`;
 
-    const { text } = await generateText({ model, prompt });
+    const text = await aiPrompt(prompt);
     let report: CoachingReport;
     try {
-      const cleaned = text.replace(/^```(?:json)?/i, "").replace(/```\s*$/i, "").trim();
-      report = CoachingSchema.parse(JSON.parse(cleaned));
+      report = CoachingSchema.parse(parseJsonReply(text));
     } catch {
       throw new Error("AI returned malformed report. Try again.");
     }

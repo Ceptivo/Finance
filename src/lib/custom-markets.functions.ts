@@ -1,28 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
+import { getQuote, searchMarketSymbols } from "./market-data.server";
 
-type FinnhubMatch = { symbol: string; description: string; displaySymbol: string; type: string };
-
-/** Search Finnhub for symbol matches (stocks, ETFs, crypto, forex). */
+/** Search for symbol matches (stocks, ETFs, crypto, forex) — no API key needed. */
 export const searchSymbols = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => z.object({ query: z.string().min(1).max(60) }).parse(d))
   .handler(async ({ data }) => {
-    const key = process.env.FINNHUB_API_KEY;
-    if (!key) return { matches: [] as FinnhubMatch[], error: "Finnhub API key not configured." };
-    try {
-      const res = await fetch(
-        `https://finnhub.io/api/v1/search?q=${encodeURIComponent(data.query)}&token=${key}`,
-        { signal: AbortSignal.timeout(8000) },
-      );
-      if (!res.ok) return { matches: [], error: `Search failed (${res.status})` };
-      const j = (await res.json()) as { result?: FinnhubMatch[] };
-      const matches = (j.result ?? []).slice(0, 20);
-      return { matches, error: null };
-    } catch (e: any) {
-      return { matches: [] as FinnhubMatch[], error: e?.message ?? "Search failed" };
-    }
+    const matches = await searchMarketSymbols(data.query);
+    return { matches, error: matches.length === 0 ? "No matches found." : null };
   });
 
 export const listCustomMarkets = createServerFn({ method: "GET" })
@@ -51,17 +38,8 @@ export const addCustomMarket = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     // Fetch baseline price now so we can compute value-of-investment later
-    const key = process.env.FINNHUB_API_KEY;
-    let baseline: number | null = null;
-    if (key) {
-      try {
-        const r = await fetch(`https://finnhub.io/api/v1/quote?symbol=${encodeURIComponent(data.symbol)}&token=${key}`, { signal: AbortSignal.timeout(8000) });
-        if (r.ok) {
-          const j = (await r.json()) as { c?: number };
-          if (j?.c && j.c > 0) baseline = j.c;
-        }
-      } catch { /* ignore */ }
-    }
+    const quote = await getQuote(data.symbol.toUpperCase());
+    const baseline: number | null = quote && quote.price > 0 ? quote.price : null;
     const { error } = await supabase
       .from("custom_markets" as never)
       .upsert({

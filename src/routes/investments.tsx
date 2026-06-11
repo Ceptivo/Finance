@@ -17,7 +17,7 @@ import {
   getProfile, saveProfile, getInvestmentDashboard, generateStrategy,
   computeHealthScore, askAssistant, addGoal, deleteGoal, addHolding, deleteHolding,
 } from "@/lib/investment.functions";
-import { getLiveMarkets, getInvestmentIdeas } from "@/lib/markets.functions";
+import { getLiveMarkets, getInvestmentIdeas, getPortfolioHistory, refreshHoldingValues } from "@/lib/markets.functions";
 import { searchSymbols, listCustomMarkets, addCustomMarket, updateCustomMarket, deleteCustomMarket } from "@/lib/custom-markets.functions";
 import { ProfitCalculator } from "@/components/ProfitCalculator";
 
@@ -123,10 +123,34 @@ function OverviewTab({ data, ccy }: { data: any; ccy: string }) {
   });
 
   const score = data?.latestScore;
-  const trend = useMemo(() => Array.from({ length: 12 }).map((_, i) => ({
-    m: ["J","F","M","A","M","J","J","A","S","O","N","D"][i],
-    value: Math.round((currentValue || 10000) * (0.85 + Math.sin(i / 2) * 0.1 + i * 0.015)),
-  })), [currentValue]);
+
+  // Real portfolio value over time, driven by live market history.
+  const [range, setRange] = useState<"1mo" | "3mo" | "6mo" | "1y" | "5y">("1y");
+  const historyFn = useServerFn(getPortfolioHistory);
+  const historyQ = useQuery({
+    queryKey: ["portfolio-history", range],
+    queryFn: () => historyFn({ data: { range } }),
+    staleTime: 5 * 60_000,
+  });
+  const trend = (historyQ.data?.points ?? []).map((p) => ({
+    m: p.date.slice(5),
+    value: p.value,
+  }));
+
+  const refreshFn = useServerFn(refreshHoldingValues);
+  const refresh = useMutation({
+    mutationFn: () => refreshFn(),
+    onSuccess: (r: { updated: number }) => {
+      qc.invalidateQueries({ queryKey: ["inv-dash"] });
+      qc.invalidateQueries({ queryKey: ["portfolio-history"] });
+      toast.success(
+        r.updated > 0
+          ? `Updated ${r.updated} holding${r.updated === 1 ? "" : "s"} from live prices`
+          : "No holdings with a symbol + quantity to refresh",
+      );
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
 
   return (
     <div className="space-y-6">
@@ -141,13 +165,39 @@ function OverviewTab({ data, ccy }: { data: any; ccy: string }) {
 
       <div className="grid lg:grid-cols-3 gap-4">
         <div className="glass rounded-2xl p-5 lg:col-span-2">
-          <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
             <div>
               <div className="text-sm font-semibold">Portfolio Trend</div>
-              <div className="text-xs text-muted-foreground">Projected 12-month value</div>
+              <div className="text-xs text-muted-foreground">Live market history of your holdings</div>
+            </div>
+            <div className="flex items-center gap-1">
+              {(["1mo", "3mo", "6mo", "1y", "5y"] as const).map((r) => (
+                <button
+                  key={r}
+                  onClick={() => setRange(r)}
+                  className={`px-2 py-1 rounded-md text-xs transition-smooth ${range === r ? "bg-primary text-primary-foreground" : "text-muted-foreground hover:bg-accent"}`}
+                >
+                  {r}
+                </button>
+              ))}
+              <button
+                onClick={() => refresh.mutate()}
+                disabled={refresh.isPending}
+                title="Refresh holding values from live prices"
+                className="ml-1 p-1.5 rounded-md text-muted-foreground hover:bg-accent disabled:opacity-50"
+              >
+                <RefreshCw className={`size-3.5 ${refresh.isPending ? "animate-spin" : ""}`} />
+              </button>
             </div>
           </div>
           <div className="h-64">
+            {historyQ.isLoading ? (
+              <div className="h-full grid place-items-center text-sm text-muted-foreground">Loading market history…</div>
+            ) : trend.length === 0 ? (
+              <div className="h-full grid place-items-center text-sm text-muted-foreground text-center px-6">
+                Add holdings with a ticker symbol + quantity, or invested custom markets, to see your real portfolio trend.
+              </div>
+            ) : (
             <ResponsiveContainer width="100%" height="100%">
               <AreaChart data={trend}>
                 <defs>
@@ -163,6 +213,7 @@ function OverviewTab({ data, ccy }: { data: any; ccy: string }) {
                 <Area type="monotone" dataKey="value" stroke="var(--color-primary)" fill="url(#g1)" strokeWidth={2} />
               </AreaChart>
             </ResponsiveContainer>
+            )}
           </div>
         </div>
 
