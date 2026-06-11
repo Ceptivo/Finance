@@ -148,11 +148,16 @@ function AddIncomeDialog({ open, onOpenChange }: { open: boolean; onOpenChange: 
   const [accountId, setAccountId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Only reset on the closed→open transition. `accounts` gets a new array
+  // identity on every render, so depending on it directly would re-fire this
+  // effect mid-typing and wipe the form.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setSource(""); setAmount(""); setCategory("Salary"); setDate(todayISO()); setTime(nowTime()); setNote("");
       setAccountId(accounts[0]?.id ?? null);
     }
+    wasOpen.current = open;
   }, [open, accounts]);
 
   const submit = async () => {
@@ -211,15 +216,21 @@ function AddExpenseDialog({
   const [accountId, setAccountId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Only reset on the closed→open transition. `accounts` and `prefill` get
+  // new identities on every render, so depending on them directly would
+  // re-fire this effect mid-typing and wipe the form.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (!open) return;
-    setDescription(prefill?.description ?? "");
-    setCost(prefill?.cost ? String(prefill.cost) : "");
-    setCategory(prefill?.category ?? "Other");
-    setDate(prefill?.date ?? todayISO());
-    setTime(nowTime());
-    setNote("");
-    setAccountId(accounts[0]?.id ?? null);
+    if (open && !wasOpen.current) {
+      setDescription(prefill?.description ?? "");
+      setCost(prefill?.cost ? String(prefill.cost) : "");
+      setCategory(prefill?.category ?? "Other");
+      setDate(prefill?.date ?? todayISO());
+      setTime(nowTime());
+      setNote("");
+      setAccountId(accounts[0]?.id ?? null);
+    }
+    wasOpen.current = open;
   }, [open, prefill, accounts]);
 
   const submit = async () => {
@@ -273,12 +284,17 @@ function AddSubscriptionDialog({ open, onOpenChange }: { open: boolean; onOpenCh
   const [accountId, setAccountId] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
 
+  // Only reset on the closed→open transition. `accounts` gets a new array
+  // identity on every render, so depending on it directly would re-fire this
+  // effect mid-typing and wipe the form.
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) {
+    if (open && !wasOpen.current) {
       setName(""); setCost(""); setCategory("AI"); setCycle("Monthly");
       setNextCharge(todayISO()); setBillingStart(todayISO()); setBillingEnd("");
       setAccountId(accounts[0]?.id ?? null);
     }
+    wasOpen.current = open;
   }, [open, accounts]);
 
   const submit = async () => {
