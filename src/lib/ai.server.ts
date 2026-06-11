@@ -23,14 +23,38 @@ function supportsAdaptiveThinking(model: string) {
   return /fable-5|mythos-5|opus-4-[678]|sonnet-4-6/.test(model);
 }
 
+/* ---------------- Per-user rate limiting ----------------
+ * AI calls cost real money, so each user gets a sliding window of
+ * AI_RATE_LIMIT calls per AI_RATE_WINDOW_MS (defaults: 30 per 10 min).
+ * In-memory per server instance — a first line of defense, not billing
+ * enforcement. */
+
+const AI_RATE_LIMIT = Number(process.env.AI_RATE_LIMIT) || 30;
+const AI_RATE_WINDOW_MS = Number(process.env.AI_RATE_WINDOW_MS) || 10 * 60_000;
+const aiCalls = new Map<string, number[]>();
+
+export function checkAiRateLimit(key: string) {
+  const now = Date.now();
+  const calls = (aiCalls.get(key) ?? []).filter((t) => now - t < AI_RATE_WINDOW_MS);
+  if (calls.length >= AI_RATE_LIMIT) {
+    throw new Error("AI rate limit reached — please wait a few minutes and try again.");
+  }
+  calls.push(now);
+  aiCalls.set(key, calls);
+  if (aiCalls.size > 10_000) aiCalls.clear();
+}
+
 export interface AiTextOptions {
   system?: string;
   messages: Anthropic.MessageParam[];
   maxTokens?: number;
+  /** Rate-limit key — pass the authenticated userId. */
+  rateKey?: string;
 }
 
 /** Run a Claude request and return the concatenated text output. */
 export async function aiText(opts: AiTextOptions): Promise<string> {
+  if (opts.rateKey) checkAiRateLimit(opts.rateKey);
   const client = anthropicClient();
   const model = aiModel();
 
@@ -53,8 +77,8 @@ export async function aiText(opts: AiTextOptions): Promise<string> {
 }
 
 /** Convenience: single user prompt (optionally with a system prompt). */
-export function aiPrompt(prompt: string, system?: string, maxTokens?: number) {
-  return aiText({ system, messages: [{ role: "user", content: prompt }], maxTokens });
+export function aiPrompt(prompt: string, system?: string, maxTokens?: number, rateKey?: string) {
+  return aiText({ system, messages: [{ role: "user", content: prompt }], maxTokens, rateKey });
 }
 
 /** Build an image content block from base64 data. */

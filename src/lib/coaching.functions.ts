@@ -82,7 +82,7 @@ Return STRICT minified JSON only (no prose, no markdown fences) matching:
 
 Be specific with numbers, use the actual currency, no fluff.`;
 
-    const text = await aiPrompt(prompt);
+    const text = await aiPrompt(prompt, undefined, undefined, userId);
     let report: CoachingReport;
     try {
       report = CoachingSchema.parse(parseJsonReply(text));

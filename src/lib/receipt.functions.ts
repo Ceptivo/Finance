@@ -1,5 +1,6 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { aiText, imageBlock, parseJsonReply } from "./ai.server";
 
 const InputSchema = z.object({
@@ -21,10 +22,12 @@ const ResultSchema = z.object({
 });
 
 export const parseReceipt = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const today = new Date().toISOString().slice(0, 10);
     const text = await aiText({
+      rateKey: context.userId,
       system: `You extract structured data from receipt photos. Reply ONLY with valid minified JSON, no prose, no code fences. Schema: {"merchant": string, "date": "YYYY-MM-DD", "total": number, "category": one of [${CATS.join(", ")}], "description": short label like "Lunch at Cafe Roma"}. If date is missing or unreadable use "${today}". Total is the final amount paid.`,
       messages: [
         {

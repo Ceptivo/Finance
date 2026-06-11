@@ -29,10 +29,18 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
 
     const seen = new Set<string>();
     const all: Array<{
-      symbol: string; label: string; category: string;
-      custom?: boolean; invested?: number; baseline?: number | null; customId?: string;
+      symbol: string;
+      label: string;
+      category: string;
+      custom?: boolean;
+      invested?: number;
+      baseline?: number | null;
+      customId?: string;
     }> = [];
-    for (const d of DEFAULT_SYMBOLS) { all.push(d); seen.add(d.symbol); }
+    for (const d of DEFAULT_SYMBOLS) {
+      all.push(d);
+      seen.add(d.symbol);
+    }
     for (const c of customs) {
       if (seen.has(c.symbol)) continue;
       seen.add(c.symbol);
@@ -71,7 +79,8 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
 
     return {
       quotes,
-      error: quotes.length === 0 ? "No quotes returned — markets may be unreachable. Try again." : null,
+      error:
+        quotes.length === 0 ? "No quotes returned — markets may be unreachable. Try again." : null,
       fetchedAt: new Date().toISOString(),
     };
   });
@@ -81,10 +90,12 @@ export const getLiveMarkets = createServerFn({ method: "GET" })
 export const getMarketHistory = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) =>
-    z.object({
-      symbol: z.string().min(1).max(40),
-      range: z.enum(["1mo", "3mo", "6mo", "1y", "5y"]).default("1y"),
-    }).parse(d),
+    z
+      .object({
+        symbol: z.string().min(1).max(40),
+        range: z.enum(["1mo", "3mo", "6mo", "1y", "5y"]).default("1y"),
+      })
+      .parse(d),
   )
   .handler(async ({ data }) => {
     const points = await getHistory(data.symbol, data.range);
@@ -105,39 +116,62 @@ export const getPortfolioHistory = createServerFn({ method: "POST" })
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
     const [{ data: holdings }, { data: customs }] = await Promise.all([
-      supabase.from("portfolio_holdings" as never).select("*").eq("user_id", userId),
-      supabase.from("custom_markets" as never).select("*").eq("user_id", userId),
+      supabase
+        .from("portfolio_holdings" as never)
+        .select("*")
+        .eq("user_id", userId),
+      supabase
+        .from("custom_markets" as never)
+        .select("*")
+        .eq("user_id", userId),
     ]);
 
     type Series = { weightAtT: (price: number) => number; points: { t: number; c: number }[] };
     const series: Series[] = [];
     let flatValue = 0;
 
-    for (const h of (holdings ?? []) as any[]) {
-      const qty = Number(h.quantity) || 0;
-      const symbol = (h.symbol ?? "").trim();
-      if (symbol && qty > 0) {
-        const points = await getHistory(symbol, data.range);
-        if (points.length > 1) {
-          series.push({ weightAtT: (p) => qty * p, points });
-          continue;
-        }
-      }
-      flatValue += Number(h.current_value) || 0;
-    }
+    // Fetch all symbol histories in parallel, then assemble.
+    const holdingRows = (holdings ?? []) as any[];
+    const customRows2 = (customs ?? []) as any[];
+    const [holdingHistories, customHistories] = await Promise.all([
+      Promise.all(
+        holdingRows.map((h) => {
+          const qty = Number(h.quantity) || 0;
+          const symbol = (h.symbol ?? "").trim();
+          return symbol && qty > 0 ? getHistory(symbol, data.range) : Promise.resolve([]);
+        }),
+      ),
+      Promise.all(
+        customRows2.map((c) => {
+          const invested = Number(c.invested_amount) || 0;
+          const baseline = Number(c.baseline_price) || 0;
+          return invested > 0 && baseline > 0 && c.symbol
+            ? getHistory(c.symbol, data.range)
+            : Promise.resolve([]);
+        }),
+      ),
+    ]);
 
-    for (const c of (customs ?? []) as any[]) {
+    holdingRows.forEach((h, i) => {
+      const qty = Number(h.quantity) || 0;
+      const points = holdingHistories[i];
+      if (points.length > 1 && qty > 0) {
+        series.push({ weightAtT: (p) => qty * p, points });
+      } else {
+        flatValue += Number(h.current_value) || 0;
+      }
+    });
+
+    customRows2.forEach((c, i) => {
       const invested = Number(c.invested_amount) || 0;
       const baseline = Number(c.baseline_price) || 0;
-      if (invested > 0 && baseline > 0 && c.symbol) {
-        const points = await getHistory(c.symbol, data.range);
-        if (points.length > 1) {
-          series.push({ weightAtT: (p) => invested * (p / baseline), points });
-          continue;
-        }
+      const points = customHistories[i];
+      if (points.length > 1 && invested > 0 && baseline > 0) {
+        series.push({ weightAtT: (p) => invested * (p / baseline), points });
+      } else {
+        flatValue += invested;
       }
-      flatValue += invested;
-    }
+    });
 
     if (series.length === 0) {
       return { points: [] as { date: string; value: number }[], flatValue };
@@ -156,7 +190,10 @@ export const getPortfolioHistory = createServerFn({ method: "POST" })
         }
         total += s.weightAtT(close);
       }
-      return { date: new Date(t * 1000).toISOString().slice(0, 10), value: Math.round(total * 100) / 100 };
+      return {
+        date: new Date(t * 1000).toISOString().slice(0, 10),
+        value: Math.round(total * 100) / 100,
+      };
     });
 
     return { points, flatValue };
@@ -173,21 +210,24 @@ export const refreshHoldingValues = createServerFn({ method: "POST" })
       .select("id,symbol,quantity")
       .eq("user_id", userId);
 
-    let updated = 0;
-    for (const h of (holdings ?? []) as any[]) {
-      const qty = Number(h.quantity) || 0;
-      const symbol = (h.symbol ?? "").trim();
-      if (!symbol || qty <= 0) continue;
-      const q = await getQuote(symbol);
-      if (!q) continue;
-      const { error } = await supabase
-        .from("portfolio_holdings" as never)
-        .update({ current_value: Math.round(qty * q.price * 100) / 100 } as never)
-        .eq("id", h.id)
-        .eq("user_id", userId);
-      if (!error) updated++;
-    }
-    return { updated };
+    const rows = ((holdings ?? []) as any[]).filter(
+      (h) => (h.symbol ?? "").trim() && (Number(h.quantity) || 0) > 0,
+    );
+    const results = await Promise.all(
+      rows.map(async (h) => {
+        const q = await getQuote(h.symbol.trim());
+        if (!q) return false;
+        const { error } = await supabase
+          .from("portfolio_holdings" as never)
+          .update({
+            current_value: Math.round((Number(h.quantity) || 0) * q.price * 100) / 100,
+          } as never)
+          .eq("id", h.id)
+          .eq("user_id", userId);
+        return !error;
+      }),
+    );
+    return { updated: results.filter(Boolean).length };
   });
 
 /* ---------------- AI investment ideas (Claude) ---------------- */
@@ -197,7 +237,7 @@ export const getInvestmentIdeas = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) =>
     z.object({ riskTolerance: z.string().max(40).optional() }).parse(d ?? {}),
   )
-  .handler(async ({ data }) => {
+  .handler(async ({ data, context }) => {
     const risk = data.riskTolerance || "Moderate";
     const today = new Date().toISOString().slice(0, 10);
 
@@ -222,7 +262,7 @@ Return STRICT JSON only, no prose, no markdown fences:
 
 Important: This is educational content only — never financial advice.`;
 
-    const text = await aiPrompt(prompt);
+    const text = await aiPrompt(prompt, undefined, undefined, context.userId);
     let parsed: any;
     try {
       parsed = parseJsonReply(text);

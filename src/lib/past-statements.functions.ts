@@ -68,7 +68,9 @@ Schema:
 
 Rules: amounts always positive numbers, classify income vs expense correctly, identify recurring charges as subscriptions, infer reasonable categories.`;
 
+    const { supabase, userId } = context;
     const text = await aiText({
+      rateKey: userId,
       system: systemPrompt,
       maxTokens: 64000,
       messages: [
@@ -99,7 +101,6 @@ Rules: amounts always positive numbers, classify income vs expense correctly, id
     const totalIncome = parsed.transactions.filter(t => t.type === "income").reduce((s, t) => s + (Number(t.amount) || 0), 0);
     const totalExpense = parsed.transactions.filter(t => t.type === "expense").reduce((s, t) => s + (Number(t.amount) || 0), 0);
 
-    const { supabase, userId } = context;
     const { data: inserted, error } = await supabase
       .from("past_statements" as never)
       .insert({

@@ -36,6 +36,7 @@ export const generateDailyReport = createServerFn({ method: "POST" })
     };
 
     const text = await aiText({
+      rateKey: userId,
       system: `You are a personal finance coach. Analyze the user's last 30 days. Output in markdown with these sections (use ## headings):
 ## Today's Snapshot
 ## Flags

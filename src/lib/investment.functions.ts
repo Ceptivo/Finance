@@ -100,6 +100,8 @@ Return JSON with shape:
 }
 Use percentages that sum to 100.`,
       "You are an educational personal-finance assistant. Respond ONLY with valid JSON matching the requested schema. Educational only, not financial advice.",
+      undefined,
+      userId,
     );
 
     let parsed: any;
@@ -200,6 +202,7 @@ LATEST HEALTH SCORE: ${JSON.stringify(score ?? {})}`;
 
     const text = await aiText({
       system,
+      rateKey: userId,
       messages: [
         ...data.history.map((m) => ({ role: m.role as "user" | "assistant", content: m.content })),
         { role: "user" as const, content: data.message },
