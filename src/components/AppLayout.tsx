@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, DollarSign, Briefcase, Repeat, Receipt, BarChart3,
-  TrendingUp, FileText, Sparkles, Menu, X, Search, LogOut, LineChart, Wallet, History, Tag, UserCog, Target,
+  TrendingUp, FileText, Sparkles, Menu, X, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, PiggyBank,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -9,6 +9,7 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 import { AddFAB } from "@/components/AddFAB";
+import { GlobalSearch } from "@/components/GlobalSearch";
 
 const nav = [
   { to: "/", label: "Dashboard", icon: LayoutDashboard },
@@ -17,6 +18,7 @@ const nav = [
   { to: "/earnings", label: "Income", icon: DollarSign },
   { to: "/expenses", label: "Expenses", icon: Receipt },
   { to: "/subscriptions", label: "Subscriptions", icon: Repeat },
+  { to: "/budgets", label: "Budgets", icon: PiggyBank },
   { to: "/investments", label: "AI Investment Hub", icon: TrendingUp },
   { to: "/financial-profile", label: "Financial Profile", icon: UserCog },
   { to: "/goals", label: "Goals", icon: Target },
@@ -114,13 +116,7 @@ export function AppLayout() {
           >
             {open ? <X className="size-5" /> : <Menu className="size-5" />}
           </button>
-          <div className="relative flex-1 max-w-md hidden sm:block">
-            <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-            <input
-              placeholder="Search income, expenses, subscriptions…"
-              className="w-full h-10 pl-9 pr-3 rounded-lg bg-muted/60 border border-border text-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-            />
-          </div>
+          <GlobalSearch />
           <div className="flex-1 sm:hidden" />
           <div className="size-9 rounded-full gradient-primary grid place-items-center text-xs font-semibold text-primary-foreground">
             {initials}

@@ -10,11 +10,15 @@ import { fmtMoney } from "@/lib/format";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis,
 } from "recharts";
-import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useMemo, useEffect, useRef } from "react";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { openAddModal } from "@/components/AddFAB";
 import { getInvestmentDashboard, getProfile } from "@/lib/investment.functions";
+import { postDueSubscriptions, getUpcomingRenewals, snapshotNetWorth, getNetWorthHistory } from "@/lib/automation.functions";
+import { listBudgets } from "@/lib/budgets.functions";
+import { toast } from "sonner";
+import { Bell } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -56,6 +60,43 @@ function Dashboard() {
     return out;
   }, [incomes, expenses]);
 
+  /* ---- Automation: post due subscription charges + snapshot net worth (once per visit) ---- */
+  const qc = useQueryClient();
+  const postDueFn = useServerFn(postDueSubscriptions);
+  const snapshotFn = useServerFn(snapshotNetWorth);
+  const ranAutomation = useRef(false);
+  useEffect(() => {
+    if (ranAutomation.current) return;
+    ranAutomation.current = true;
+    postDueFn()
+      .then((r) => {
+        if (r.posted.length > 0) {
+          toast.info(`Posted ${r.posted.length} subscription charge${r.posted.length === 1 ? "" : "s"}: ${r.posted.join(", ")}`);
+          qc.invalidateQueries({ queryKey: ["expenses"] });
+          qc.invalidateQueries({ queryKey: ["subscriptions"] });
+        }
+      })
+      .catch(() => {});
+    snapshotFn()
+      .then(() => qc.invalidateQueries({ queryKey: ["networth-history"] }))
+      .catch(() => {});
+  }, [postDueFn, snapshotFn, qc]);
+
+  /* ---- Renewal reminders (next 7 days) ---- */
+  const renewalsFn = useServerFn(getUpcomingRenewals);
+  const renewalsQ = useQuery({ queryKey: ["upcoming-renewals"], queryFn: () => renewalsFn(), staleTime: 10 * 60_000 });
+  const upcoming = renewalsQ.data?.items ?? [];
+
+  /* ---- Net worth history ---- */
+  const nwFn = useServerFn(getNetWorthHistory);
+  const nwQ = useQuery({ queryKey: ["networth-history"], queryFn: () => nwFn({ data: { days: 365 } }), staleTime: 10 * 60_000 });
+  const nwPoints = nwQ.data?.points ?? [];
+
+  /* ---- Budget alerts ---- */
+  const budgetsFn = useServerFn(listBudgets);
+  const budgetsQ = useQuery({ queryKey: ["budgets"], queryFn: () => budgetsFn(), staleTime: 60_000 });
+  const hotBudgets = (budgetsQ.data?.items ?? []).filter((b) => b.pct >= 80);
+
   const savedMo = Math.max(0, incomeMo - expenseMo);
   const monthlyGoal = Number(profile?.monthly_savings_goal) || 0;
   const goalPct = monthlyGoal > 0 ? Math.min(100, Math.round((savedMo / monthlyGoal) * 100)) : 0;
@@ -65,6 +106,31 @@ function Dashboard() {
   return (
     <>
       <PageHeader title="My Finances" subtitle="Everything you earn, spend, and own — in one place." />
+
+      {(upcoming.length > 0 || hotBudgets.length > 0) && (
+        <div className="mb-5 space-y-2">
+          {upcoming.length > 0 && (
+            <div className="glass rounded-xl px-4 py-3 border border-primary/25 flex items-start gap-3 text-sm">
+              <Bell className="size-4 text-primary shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <span className="font-medium">Renewing soon: </span>
+                <span className="text-muted-foreground">
+                  {upcoming.map((u: any) => `${u.name} (${fmtMoney(Number(u.amount) || 0)} on ${u.next_renewal})`).join(" · ")}
+                </span>
+              </div>
+            </div>
+          )}
+          {hotBudgets.map((b) => (
+            <Link key={b.id} to="/budgets" className="glass rounded-xl px-4 py-3 border border-amber-500/30 flex items-start gap-3 text-sm block hover:border-amber-400/60 transition">
+              <span className={`size-2 rounded-full mt-1.5 shrink-0 ${b.pct >= 100 ? "bg-rose-500" : "bg-amber-400"}`} />
+              <div>
+                <span className="font-medium">{b.category} budget {b.pct >= 100 ? "exceeded" : `at ${b.pct}%`}: </span>
+                <span className="text-muted-foreground">{fmtMoney(b.spent)} of {fmtMoney(b.monthly_limit)} this month.</span>
+              </div>
+            </Link>
+          ))}
+        </div>
+      )}
 
       <div className="grid grid-cols-2 lg:grid-cols-3 gap-3 sm:gap-4">
         <Link to="/earnings" className="block hover:scale-[1.01] transition">
@@ -174,6 +240,35 @@ function Dashboard() {
         </div>
         <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition relative" />
       </Link>
+
+      {nwPoints.length >= 2 && (
+        <div className="mt-6 glass rounded-2xl p-5 shadow-elegant">
+          <div className="flex items-center justify-between mb-1">
+            <h3 className="font-semibold">Net Worth</h3>
+            <span className="text-sm font-semibold tabular-nums">
+              {fmtMoney(nwPoints[nwPoints.length - 1].netWorth)}
+            </span>
+          </div>
+          <p className="text-xs text-muted-foreground mb-3">Daily snapshots · accounts + investments − liabilities</p>
+          <div className="h-40">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={nwPoints}>
+                <defs>
+                  <linearGradient id="nwGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="var(--color-primary)" stopOpacity={0.45} />
+                    <stop offset="100%" stopColor="var(--color-primary)" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid stroke="var(--color-border)" strokeDasharray="3 3" vertical={false} />
+                <XAxis dataKey="date" stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} minTickGap={40} />
+                <YAxis stroke="var(--color-muted-foreground)" fontSize={11} tickLine={false} axisLine={false} width={70} tickFormatter={(v: number) => fmtMoney(v)} />
+                <Tooltip contentStyle={{ background: "var(--color-popover)", border: "1px solid var(--color-border)", borderRadius: 12 }} formatter={(v: number) => fmtMoney(Number(v))} />
+                <Area type="monotone" dataKey="netWorth" name="Net worth" stroke="var(--color-primary)" strokeWidth={2.5} fill="url(#nwGrad)" />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+        </div>
+      )}
 
 
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4 mt-6">

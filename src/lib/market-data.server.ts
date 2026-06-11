@@ -66,7 +66,11 @@ interface YahooChart {
   };
 }
 
-async function yahooChart(symbol: string, range: string, interval: string): Promise<YahooChart | null> {
+async function yahooChart(
+  symbol: string,
+  range: string,
+  interval: string,
+): Promise<YahooChart | null> {
   try {
     const url = `https://query1.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=${interval}`;
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
@@ -105,7 +109,14 @@ async function finnhubQuote(symbol: string): Promise<MarketQuote | null> {
       { signal: AbortSignal.timeout(8000) },
     );
     if (!res.ok) return null;
-    const j = (await res.json()) as { c: number; d: number; dp: number; h: number; l: number; pc: number };
+    const j = (await res.json()) as {
+      c: number;
+      d: number;
+      dp: number;
+      h: number;
+      l: number;
+      pc: number;
+    };
     if (!j || typeof j.c !== "number" || j.c === 0) return null;
     return {
       symbol,
@@ -174,7 +185,13 @@ export async function searchMarketSymbols(query: string): Promise<SymbolMatch[]>
     const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
     if (!res.ok) return [];
     const j = (await res.json()) as {
-      quotes?: Array<{ symbol?: string; shortname?: string; longname?: string; quoteType?: string; exchDisp?: string }>;
+      quotes?: Array<{
+        symbol?: string;
+        shortname?: string;
+        longname?: string;
+        quoteType?: string;
+        exchDisp?: string;
+      }>;
     };
     const matches: SymbolMatch[] = (j.quotes ?? [])
       .filter((q) => q.symbol)

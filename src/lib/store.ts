@@ -186,7 +186,16 @@ export function useAccounts() {
   });
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["subscriptions"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["subscriptions"]);
+      qc.setQueryData(["subscriptions"], (old: { items: any[] } | undefined) => ({
+        items: (old?.items ?? []).filter((r) => r.id !== id),
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["subscriptions"], ctx.prev); },
+    onSettled: invalidate,
   });
 
   return {
@@ -217,11 +226,35 @@ export function useIncomes() {
           notes: e.note ?? null, account_id: e.accountId ?? null,
         },
       }),
-    onSuccess: invalidate,
+    // Optimistic: show the new entry instantly, roll back on failure.
+    onMutate: async (e) => {
+      await qc.cancelQueries({ queryKey: ["incomes"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["incomes"]);
+      qc.setQueryData(["incomes"], (old: { items: any[] } | undefined) => ({
+        items: [
+          { id: `optimistic-${Date.now()}`, source: e.source, category: e.category,
+            amount: e.amount, occurred_on: e.date, occurred_at: e.time ?? null,
+            notes: e.note ?? null, account_id: e.accountId ?? null },
+          ...(old?.items ?? []),
+        ],
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["incomes"], ctx.prev); },
+    onSettled: invalidate,
   });
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["incomes"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["incomes"]);
+      qc.setQueryData(["incomes"], (old: { items: any[] } | undefined) => ({
+        items: (old?.items ?? []).filter((r) => r.id !== id),
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["incomes"], ctx.prev); },
+    onSettled: invalidate,
   });
 
   return {
@@ -251,11 +284,34 @@ export function useExpenses() {
           notes: e.note ?? null, account_id: e.accountId ?? null,
         },
       }),
-    onSuccess: invalidate,
+    onMutate: async (e) => {
+      await qc.cancelQueries({ queryKey: ["expenses"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["expenses"]);
+      qc.setQueryData(["expenses"], (old: { items: any[] } | undefined) => ({
+        items: [
+          { id: `optimistic-${Date.now()}`, merchant: e.description, category: e.category,
+            amount: e.cost, occurred_on: e.date, occurred_at: e.time ?? null,
+            notes: e.note ?? null, account_id: e.accountId ?? null },
+          ...(old?.items ?? []),
+        ],
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["expenses"], ctx.prev); },
+    onSettled: invalidate,
   });
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["expenses"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["expenses"]);
+      qc.setQueryData(["expenses"], (old: { items: any[] } | undefined) => ({
+        items: (old?.items ?? []).filter((r) => r.id !== id),
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["expenses"], ctx.prev); },
+    onSettled: invalidate,
   });
 
   return {
@@ -294,7 +350,16 @@ export function useSubs() {
   });
   const remove = useMutation({
     mutationFn: (id: string) => delFn({ data: { id } }),
-    onSuccess: invalidate,
+    onMutate: async (id) => {
+      await qc.cancelQueries({ queryKey: ["subscriptions"] });
+      const prev = qc.getQueryData<{ items: any[] }>(["subscriptions"]);
+      qc.setQueryData(["subscriptions"], (old: { items: any[] } | undefined) => ({
+        items: (old?.items ?? []).filter((r) => r.id !== id),
+      }));
+      return { prev };
+    },
+    onError: (_e, _v, ctx) => { if (ctx?.prev) qc.setQueryData(["subscriptions"], ctx.prev); },
+    onSettled: invalidate,
   });
 
   return {

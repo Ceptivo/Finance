@@ -11,6 +11,7 @@ import {
 } from "lucide-react";
 import { getStatement } from "@/lib/past-statements.functions";
 import { generateCoachingReport } from "@/lib/coaching.functions";
+import { importStatementToLive } from "@/lib/automation.functions";
 import {
   ResponsiveContainer, BarChart, Bar, XAxis, YAxis, Tooltip, CartesianGrid,
   PieChart, Pie, Cell, Legend, AreaChart, Area, LineChart, Line,
@@ -30,6 +31,16 @@ function StatementDetail() {
   const qc = useQueryClient();
   const getFn = useServerFn(getStatement);
   const coachFn = useServerFn(generateCoachingReport);
+  const importFn = useServerFn(importStatementToLive);
+  const importLive = useMutation({
+    mutationFn: () => importFn({ data: { id } }),
+    onSuccess: (r: { incomes: number; expenses: number }) => {
+      qc.invalidateQueries({ queryKey: ["incomes"] });
+      qc.invalidateQueries({ queryKey: ["expenses"] });
+      toast.success(`Imported ${r.incomes} income + ${r.expenses} expense entries into your live dashboard`);
+    },
+    onError: (e: Error) => toast.error(e.message),
+  });
   const { data, isLoading } = useQuery({
     queryKey: ["past-statement", id],
     queryFn: () => getFn({ data: { id } }),
@@ -113,14 +124,26 @@ function StatementDetail() {
         title={s.label}
         subtitle={`${s.period_start ?? "—"} → ${s.period_end ?? "—"} · sandboxed view`}
         actions={
-          <button
-            onClick={() => coach.mutate()}
-            disabled={coach.isPending}
-            className="gradient-primary text-primary-foreground rounded-lg h-10 px-4 text-sm font-medium shadow-glow inline-flex items-center gap-2"
-          >
-            {coach.isPending ? <Loader2 className="size-4 animate-spin" /> : <GraduationCap className="size-4" />}
-            {coaching ? "Refresh coaching" : "Generate coaching"}
-          </button>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              onClick={() => {
+                if (confirm("Import every parsed transaction from this statement into your LIVE income and expenses? This adds real entries to your dashboard.")) importLive.mutate();
+              }}
+              disabled={importLive.isPending}
+              className="border border-border rounded-lg h-10 px-4 text-sm font-medium inline-flex items-center gap-2 hover:bg-accent transition-smooth"
+            >
+              {importLive.isPending ? <Loader2 className="size-4 animate-spin" /> : <ArrowLeft className="size-4 rotate-180" />}
+              Import into live data
+            </button>
+            <button
+              onClick={() => coach.mutate()}
+              disabled={coach.isPending}
+              className="gradient-primary text-primary-foreground rounded-lg h-10 px-4 text-sm font-medium shadow-glow inline-flex items-center gap-2"
+            >
+              {coach.isPending ? <Loader2 className="size-4 animate-spin" /> : <GraduationCap className="size-4" />}
+              {coaching ? "Refresh coaching" : "Generate coaching"}
+            </button>
+          </div>
         }
       />
 

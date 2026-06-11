@@ -2,6 +2,14 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 
+// List queries are bounded: by default they fetch from Jan 1 of last year
+// (covers YTD + last-year comparisons) capped at 5000 rows, instead of the
+// user's entire history. Pass { since } to reach further back.
+const ListOptions = z.object({ since: z.string().optional() }).optional();
+function defaultSince() {
+  return `${new Date().getFullYear() - 1}-01-01`;
+}
+
 /* ---------------- Accounts ---------------- */
 
 const AccountInput = z.object({
@@ -83,13 +91,16 @@ const IncomeInput = z.object({
 
 export const listIncomes = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => ListOptions.parse(d ?? undefined))
+  .handler(async ({ data: opts, context }) => {
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("incomes" as never)
       .select("*")
       .eq("user_id", userId)
-      .order("occurred_on", { ascending: false });
+      .gte("occurred_on", opts?.since ?? defaultSince())
+      .order("occurred_on", { ascending: false })
+      .limit(5000);
     if (error) throw new Error(error.message);
     return { items: (data ?? []) as any[] };
   });
@@ -134,13 +145,16 @@ const ExpenseInput = z.object({
 
 export const listExpenses = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
-  .handler(async ({ context }) => {
+  .inputValidator((d: unknown) => ListOptions.parse(d ?? undefined))
+  .handler(async ({ data: opts, context }) => {
     const { supabase, userId } = context;
     const { data, error } = await supabase
       .from("expenses" as never)
       .select("*")
       .eq("user_id", userId)
-      .order("occurred_on", { ascending: false });
+      .gte("occurred_on", opts?.since ?? defaultSince())
+      .order("occurred_on", { ascending: false })
+      .limit(5000);
     if (error) throw new Error(error.message);
     return { items: (data ?? []) as any[] };
   });

@@ -23,6 +23,7 @@ import { Route as ClientsRouteImport } from './routes/clients'
 import { Route as CeptivoRouteImport } from './routes/ceptivo'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as BusinessesRouteImport } from './routes/businesses'
+import { Route as BudgetsRouteImport } from './routes/budgets'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
 import { Route as AccountsRouteImport } from './routes/accounts'
@@ -102,6 +103,11 @@ const BusinessesRoute = BusinessesRouteImport.update({
   path: '/businesses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BudgetsRoute = BudgetsRouteImport.update({
+  id: '/budgets',
+  path: '/budgets',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -148,6 +154,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AccountsRouteWithChildren
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/budgets': typeof BudgetsRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
@@ -172,6 +179,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AccountsRouteWithChildren
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/budgets': typeof BudgetsRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
@@ -196,6 +204,7 @@ export interface FileRoutesById {
   '/accounts': typeof AccountsRouteWithChildren
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/budgets': typeof BudgetsRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
@@ -222,6 +231,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/analytics'
     | '/auth'
+    | '/budgets'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
@@ -246,6 +256,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/analytics'
     | '/auth'
+    | '/budgets'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
@@ -269,6 +280,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/analytics'
     | '/auth'
+    | '/budgets'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
@@ -294,6 +306,7 @@ export interface RootRouteChildren {
   AccountsRoute: typeof AccountsRouteWithChildren
   AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
+  BudgetsRoute: typeof BudgetsRoute
   BusinessesRoute: typeof BusinessesRouteWithChildren
   CategoriesRoute: typeof CategoriesRoute
   CeptivoRoute: typeof CeptivoRoute
@@ -410,6 +423,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/budgets': {
+      id: '/budgets'
+      path: '/budgets'
+      fullPath: '/budgets'
+      preLoaderRoute: typeof BudgetsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -512,6 +532,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountsRoute: AccountsRouteWithChildren,
   AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
+  BudgetsRoute: BudgetsRoute,
   BusinessesRoute: BusinessesRouteWithChildren,
   CategoriesRoute: CategoriesRoute,
   CeptivoRoute: CeptivoRoute,
