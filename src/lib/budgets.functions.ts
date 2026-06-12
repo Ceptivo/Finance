@@ -44,7 +44,8 @@ export const listBudgets = createServerFn({ method: "GET" })
 
     const items = ((budgets ?? []) as any[]).map((b) => {
       const used = spent.get(b.category) ?? 0;
-      const limit = Number(b.monthly_limit) || 0;
+      // Schema truth is limit_amount; tolerate legacy monthly_limit rows.
+      const limit = Number(b.limit_amount ?? b.monthly_limit) || 0;
       return {
         id: b.id,
         category: b.category,
@@ -70,12 +71,26 @@ export const upsertBudget = createServerFn({ method: "POST" })
   )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase
+    // Manual upsert — works whether or not the unique constraint exists.
+    const { data: existing, error: selErr } = await supabase
       .from("budgets" as never)
-      .upsert(
-        { user_id: userId, category: data.category, monthly_limit: data.monthly_limit } as never,
-        { onConflict: "user_id,category" },
-      );
+      .select("id")
+      .eq("user_id", userId)
+      .eq("category", data.category)
+      .maybeSingle();
+    if (selErr) throw new Error(isMissingTable(selErr.message) ? MIGRATION_HINT : selErr.message);
+    const { error } = existing
+      ? await supabase
+          .from("budgets" as never)
+          .update({ limit_amount: data.monthly_limit } as never)
+          .eq("id", (existing as any).id)
+          .eq("user_id", userId)
+      : await supabase.from("budgets" as never).insert({
+          user_id: userId,
+          category: data.category,
+          limit_amount: data.monthly_limit,
+          period: "monthly",
+        } as never);
     if (error) throw new Error(isMissingTable(error.message) ? MIGRATION_HINT : error.message);
     return { ok: true };
   });

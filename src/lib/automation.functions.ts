@@ -138,16 +138,20 @@ export const snapshotNetWorth = createServerFn({ method: "POST" })
     for (const c of (customs ?? []) as any[]) assets += Number(c.invested_amount) || 0;
 
     const netWorth = assets - liabilities;
-    const { error } = await supabase.from("net_worth_snapshots" as never).upsert(
-      {
-        user_id: userId,
-        snapshot_date: new Date().toISOString().slice(0, 10),
-        assets: Math.round(assets * 100) / 100,
-        liabilities: Math.round(liabilities * 100) / 100,
-        net_worth: Math.round(netWorth * 100) / 100,
-      } as never,
-      { onConflict: "user_id,snapshot_date" },
-    );
+    const today = new Date().toISOString().slice(0, 10);
+    // Delete-then-insert: idempotent even without a unique constraint.
+    await supabase
+      .from("net_worth_snapshots" as never)
+      .delete()
+      .eq("user_id", userId)
+      .eq("snapshot_date", today);
+    const { error } = await supabase.from("net_worth_snapshots" as never).insert({
+      user_id: userId,
+      snapshot_date: today,
+      assets: Math.round(assets * 100) / 100,
+      liabilities: Math.round(liabilities * 100) / 100,
+      net_worth: Math.round(netWorth * 100) / 100,
+    } as never);
     if (error && !isMissingColumnOrTable(error.message)) throw new Error(error.message);
     return { netWorth, assets, liabilities, recorded: !error };
   });

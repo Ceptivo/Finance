@@ -43,6 +43,14 @@ export const saveProfile = createServerFn({ method: "POST" })
         .insert({ ...data, user_id: userId } as never);
       if (error) throw new Error(error.message);
     }
+    // Keep the profiles table (schema source of truth) in sync; ignore if absent.
+    if (data.currency || data.monthly_savings_goal != null) {
+      await supabase.from("profiles" as never).upsert({
+        id: userId,
+        ...(data.currency ? { currency: data.currency } : {}),
+        ...(data.monthly_savings_goal != null ? { savings_goal: data.monthly_savings_goal } : {}),
+      } as never);
+    }
     return { ok: true };
   });
 
@@ -50,12 +58,26 @@ export const getProfile = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
-    const { data } = await supabase
-      .from("users_financial_profiles" as never)
-      .select("*")
-      .eq("user_id", userId)
-      .maybeSingle();
-    return { profile: data };
+    const [{ data }, prefs] = await Promise.all([
+      supabase
+        .from("users_financial_profiles" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      // profiles is the schema's source of truth for currency/savings_goal
+      supabase
+        .from("profiles" as never)
+        .select("currency,savings_goal")
+        .eq("id", userId)
+        .maybeSingle(),
+    ]);
+    const merged: any = data ? { ...(data as any) } : {};
+    const pr = prefs?.data as any;
+    if (pr?.currency) merged.currency = pr.currency;
+    if (pr?.savings_goal != null && merged.monthly_savings_goal == null) {
+      merged.monthly_savings_goal = pr.savings_goal;
+    }
+    return { profile: Object.keys(merged).length ? merged : null };
   });
 
 export const getInvestmentDashboard = createServerFn({ method: "GET" })
@@ -63,11 +85,33 @@ export const getInvestmentDashboard = createServerFn({ method: "GET" })
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
     const [p, g, h, s, r] = await Promise.all([
-      supabase.from("users_financial_profiles" as never).select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("investment_goals" as never).select("*").eq("user_id", userId).order("created_at", { ascending: false }),
-      supabase.from("portfolio_holdings" as never).select("*").eq("user_id", userId),
-      supabase.from("financial_health_scores" as never).select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
-      supabase.from("ai_recommendations" as never).select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(10),
+      supabase
+        .from("users_financial_profiles" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("investment_goals" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false }),
+      supabase
+        .from("portfolio_holdings" as never)
+        .select("*")
+        .eq("user_id", userId),
+      supabase
+        .from("financial_health_scores" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
+      supabase
+        .from("ai_recommendations" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(10),
     ]);
     return {
       profile: p.data,
@@ -110,7 +154,13 @@ Use percentages that sum to 100.`,
     try {
       parsed = parseJsonReply(text);
     } catch {
-      parsed = { summary: text, monthlyContribution: 0, allocation: [], expectedRisk: "Unknown", rationale: "" };
+      parsed = {
+        summary: text,
+        monthlyContribution: 0,
+        allocation: [],
+        expectedRisk: "Unknown",
+        rationale: "",
+      };
     }
 
     await supabase.from("ai_recommendations" as never).insert({
@@ -180,7 +230,10 @@ export const computeHealthScore = createServerFn({ method: "POST" })
 
 const ChatSchema = z.object({
   message: z.string().min(1).max(2000),
-  history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) })).max(20).default([]),
+  history: z
+    .array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().max(4000) }))
+    .max(20)
+    .default([]),
 });
 
 export const askAssistant = createServerFn({ method: "POST" })
@@ -190,9 +243,22 @@ export const askAssistant = createServerFn({ method: "POST" })
     const { supabase, userId } = context;
     await requirePremium(supabase, userId, context.claims as any);
     const [{ data: profile }, { data: goals }, { data: score }] = await Promise.all([
-      supabase.from("users_financial_profiles" as never).select("*").eq("user_id", userId).maybeSingle(),
-      supabase.from("investment_goals" as never).select("*").eq("user_id", userId),
-      supabase.from("financial_health_scores" as never).select("*").eq("user_id", userId).order("created_at", { ascending: false }).limit(1).maybeSingle(),
+      supabase
+        .from("users_financial_profiles" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .maybeSingle(),
+      supabase
+        .from("investment_goals" as never)
+        .select("*")
+        .eq("user_id", userId),
+      supabase
+        .from("financial_health_scores" as never)
+        .select("*")
+        .eq("user_id", userId)
+        .order("created_at", { ascending: false })
+        .limit(1)
+        .maybeSingle(),
     ]);
 
     const system = `You are an educational personal-finance assistant for one user.
@@ -227,7 +293,9 @@ export const addGoal = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => GoalSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("investment_goals" as never).insert({ ...data, user_id: userId } as never);
+    const { error } = await supabase
+      .from("investment_goals" as never)
+      .insert({ ...data, user_id: userId } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -237,7 +305,11 @@ export const deleteGoal = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await supabase.from("investment_goals" as never).delete().eq("id", data.id).eq("user_id", userId);
+    await supabase
+      .from("investment_goals" as never)
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     return { ok: true };
   });
 
@@ -255,7 +327,9 @@ export const addHolding = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => HoldingSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("portfolio_holdings" as never).insert({ ...data, user_id: userId } as never);
+    const { error } = await supabase
+      .from("portfolio_holdings" as never)
+      .insert({ ...data, user_id: userId } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -265,6 +339,10 @@ export const deleteHolding = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    await supabase.from("portfolio_holdings" as never).delete().eq("id", data.id).eq("user_id", userId);
+    await supabase
+      .from("portfolio_holdings" as never)
+      .delete()
+      .eq("id", data.id)
+      .eq("user_id", userId);
     return { ok: true };
   });
