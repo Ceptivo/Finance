@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WealthShieldRouteImport } from './routes/wealth-shield'
+import { Route as ChallengesRouteImport } from './routes/challenges'
 import { Route as BillCalendarRouteImport } from './routes/bill-calendar'
 import { Route as AiNegotiatorRouteImport } from './routes/ai-negotiator'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
@@ -35,6 +36,11 @@ import { Route as PastFinancesIdRouteImport } from './routes/past-finances.$id'
 import { Route as BusinessesIdRouteImport } from './routes/businesses.$id'
 import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 
+const ChallengesRoute = ChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const WealthShieldRoute = WealthShieldRouteImport.update({
   id: '/wealth-shield',
   path: '/wealth-shield',
@@ -166,6 +172,7 @@ export interface FileRoutesByFullPath {
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
   '/bill-calendar': typeof BillCalendarRoute
+  '/challenges': typeof ChallengesRoute
   '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
@@ -193,6 +200,7 @@ export interface FileRoutesByTo {
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
   '/bill-calendar': typeof BillCalendarRoute
+  '/challenges': typeof ChallengesRoute
   '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
@@ -220,6 +228,7 @@ export interface FileRoutesById {
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
   '/bill-calendar': typeof BillCalendarRoute
+  '/challenges': typeof ChallengesRoute
   '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
@@ -249,6 +258,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/ai-negotiator'
     | '/bill-calendar'
+    | '/challenges'
     | '/wealth-shield'
     | '/analytics'
     | '/auth'
@@ -276,6 +286,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/ai-negotiator'
     | '/bill-calendar'
+    | '/challenges'
     | '/wealth-shield'
     | '/analytics'
     | '/auth'
@@ -302,6 +313,7 @@ export interface FileRouteTypes {
     | '/accounts'
     | '/ai-negotiator'
     | '/bill-calendar'
+    | '/challenges'
     | '/wealth-shield'
     | '/analytics'
     | '/auth'
@@ -330,6 +342,7 @@ export interface RootRouteChildren {
   AccountsRoute: typeof AccountsRouteWithChildren
   AiNegotiatorRoute: typeof AiNegotiatorRoute
   BillCalendarRoute: typeof BillCalendarRoute
+  ChallengesRoute: typeof ChallengesRoute
   WealthShieldRoute: typeof WealthShieldRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
@@ -363,6 +376,13 @@ declare module '@tanstack/react-router' {
       path: '/bill-calendar'
       fullPath: '/bill-calendar'
       preLoaderRoute: typeof BillCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/challenges': {
+      id: '/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof ChallengesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ai-negotiator': {
@@ -572,6 +592,7 @@ const rootRouteChildren: RootRouteChildren = {
   AccountsRoute: AccountsRouteWithChildren,
   AiNegotiatorRoute: AiNegotiatorRoute,
   BillCalendarRoute: BillCalendarRoute,
+  ChallengesRoute: ChallengesRoute,
   WealthShieldRoute: WealthShieldRoute,
   AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,

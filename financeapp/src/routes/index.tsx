@@ -2,18 +2,19 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import {
   TrendingUp, ArrowUp, ArrowDown, ChevronRight, Plus, Wallet,
   CreditCard, Send, Download, MoreHorizontal, Bell, Shield,
-  Target, Repeat, Receipt, BarChart3, Share2,
+  Target, Repeat, Receipt, BarChart3, Share2, Trophy, Crown, Clock,
 } from "lucide-react";
 import { useAccounts, useExpenses, useIncomes, useSubs, inMonth, inYear } from "@/lib/store";
 import { fmtMoney } from "@/lib/format";
 import {
   Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis,
 } from "recharts";
-import { useMemo } from "react";
+import { useMemo, useState, useEffect } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
 import { openAddModal } from "@/components/AddFAB";
 import { getInvestmentDashboard, getProfile } from "@/lib/investment.functions";
+import { getActiveChallenge, getUserChallengeStatus } from "@/lib/challenges.functions";
 import { useSession } from "@/hooks/use-session";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
@@ -190,6 +191,9 @@ function Dashboard() {
           <div className="text-[11px] text-muted-foreground">{incomeMo > 0 ? `${Math.round((netMo / incomeMo) * 100)}% margin` : "—"}</div>
         </Link>
       </div>
+
+      {/* ── Smart Money Challenge Widget ──────────────────────────── */}
+      <SmartMoneyWidget />
 
       {/* ── Cash Flow Chart + Recent Activity ─────────────────────── */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-4">
@@ -418,6 +422,117 @@ function Dashboard() {
         ))}
       </div>
     </div>
+  );
+}
+
+/* ── Smart Money Challenge Dashboard Widget ──────────────────────────────── */
+function SmartMoneyWidget() {
+  const getChallengeFn = useServerFn(getActiveChallenge);
+  const getStatusFn = useServerFn(getUserChallengeStatus);
+
+  const challengeQ = useQuery({
+    queryKey: ["active-challenge"],
+    queryFn: () => getChallengeFn(),
+    staleTime: 60_000,
+  });
+  const statusQ = useQuery({
+    queryKey: ["user-challenge-status"],
+    queryFn: () => getStatusFn(),
+    staleTime: 30_000,
+  });
+
+  const challenge: any = (challengeQ.data as any)?.challenge ?? null;
+  const stats: any = (challengeQ.data as any)?.stats ?? null;
+  const userStatus = (statusQ.data as any)?.status ?? "not_joined";
+
+  // Countdown
+  const [daysLeft, setDaysLeft] = useState<number | null>(null);
+  useEffect(() => {
+    if (!challenge?.end_date) return;
+    const diff = new Date(challenge.end_date + "T23:59:59").getTime() - Date.now();
+    setDaysLeft(diff > 0 ? Math.ceil(diff / 86_400_000) : 0);
+  }, [challenge?.end_date]);
+
+  if (!challenge || challengeQ.isLoading) return null;
+
+  const capPct = stats ? Math.round((stats.paid / stats.cap) * 100) : 0;
+
+  const statusLabel = {
+    not_joined: null,
+    joined: "You've joined — confirm completion to qualify.",
+    qualified: "✓ You're qualified for the draw!",
+    main_winner: "🏆 You won 3 Months Premium!",
+    loser_winner: "🎉 You won 1 Month Premium!",
+    payment_pending: "Payment pending.",
+  }[userStatus] ?? null;
+
+  return (
+    <Link
+      to="/challenges"
+      className="block rounded-2xl overflow-hidden shadow-elegant hover:scale-[1.005] transition-smooth"
+      style={{
+        background: "linear-gradient(135deg, oklch(0.18 0.030 155), oklch(0.14 0.015 155) 55%, oklch(0.12 0.005 270))",
+        border: "1px solid oklch(0.72 0.19 155 / 0.30)",
+      }}
+    >
+      <div className="relative p-5">
+        <div className="absolute top-0 right-0 w-48 h-48 pointer-events-none"
+          style={{ background: "radial-gradient(circle, oklch(0.72 0.19 155 / 0.15) 0%, transparent 70%)", transform: "translate(25%,-25%)" }} />
+
+        <div className="relative flex items-start justify-between gap-4 flex-wrap">
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center gap-2 mb-2">
+              <div className="size-8 rounded-xl gradient-primary grid place-items-center shadow-glow shrink-0">
+                <Trophy className="size-4 text-primary-foreground" />
+              </div>
+              <span className="text-xs font-medium text-emerald-400">Smart Money Challenge</span>
+              <span className="text-[10px] px-2 py-0.5 rounded-full"
+                style={{ background: "oklch(0.72 0.19 155 / 0.15)", color: "oklch(0.82 0.17 155)" }}>
+                Active
+              </span>
+            </div>
+            <div className="text-base font-bold text-white truncate">{challenge.title}</div>
+            {statusLabel ? (
+              <div className="text-xs text-emerald-400 mt-0.5">{statusLabel}</div>
+            ) : (
+              <div className="text-xs text-white/50 mt-0.5">
+                Join {stats?.paid ?? 0} others · {fmtMoney(challenge.entry_fee ?? 10)} entry
+              </div>
+            )}
+          </div>
+
+          <div className="shrink-0 text-right">
+            <div className="flex items-center gap-1 text-white/50 text-xs mb-1">
+              <Crown className="size-3 text-amber-400" />
+              <span className="text-amber-400 font-medium">3 Mo Premium</span>
+            </div>
+            {daysLeft !== null && (
+              <div className="flex items-center gap-1 text-xs text-white/40">
+                <Clock className="size-3" /> {daysLeft}d left
+              </div>
+            )}
+          </div>
+        </div>
+
+        {/* Cap bar */}
+        <div className="relative mt-4">
+          <div className="flex justify-between text-[10px] text-white/40 mb-1">
+            <span>{stats?.paid ?? 0} of {stats?.cap ?? 500} spots filled</span>
+            <span className="text-white/60">Join for {fmtMoney(challenge.entry_fee ?? 10)} →</span>
+          </div>
+          <div className="h-1.5 rounded-full overflow-hidden" style={{ background: "oklch(1 0 0 / 0.08)" }}>
+            <div
+              className="h-full rounded-full transition-all"
+              style={{
+                width: `${capPct}%`,
+                background: "linear-gradient(90deg, oklch(0.72 0.19 155), oklch(0.82 0.17 155))",
+                boxShadow: "0 0 8px oklch(0.72 0.19 155 / 0.6)",
+              }}
+            />
+          </div>
+        </div>
+      </div>
+    </Link>
   );
 }
 
