@@ -18,7 +18,7 @@ import { getInvestmentDashboard, getProfile } from "@/lib/investment.functions";
 import { postDueSubscriptions, getUpcomingRenewals, snapshotNetWorth, getNetWorthHistory } from "@/lib/automation.functions";
 import { listBudgets } from "@/lib/budgets.functions";
 import { toast } from "sonner";
-import { Bell } from "lucide-react";
+import { Bell, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/")({ component: Dashboard });
 
@@ -239,6 +239,26 @@ function Dashboard() {
           </div>
         </div>
         <ChevronRight className="size-5 text-muted-foreground group-hover:text-primary transition relative" />
+      </Link>
+
+      <Link
+        to="/wealth-shield"
+        className="mt-6 group glass rounded-2xl p-5 shadow-elegant flex items-center gap-4 relative overflow-hidden hover:border-emerald-400/40 transition border border-emerald-500/20 block"
+      >
+        <div
+          className="absolute inset-0 opacity-20 pointer-events-none"
+          style={{ background: "radial-gradient(60% 80% at 0% 0%, #34d399, transparent 70%)" }}
+        />
+        <div className="size-12 rounded-xl bg-emerald-500/15 grid place-items-center shrink-0 relative">
+          <ShieldCheck className="size-5 text-emerald-400" />
+        </div>
+        <div className="flex-1 min-w-0 relative">
+          <div className="text-xs uppercase tracking-wider text-muted-foreground">Wealth Shield</div>
+          <div className="mt-0.5 text-sm">
+            Debt payoff engine · TFSA limit guard · bills calendar · bank fee sniper
+          </div>
+        </div>
+        <ChevronRight className="size-5 text-muted-foreground group-hover:text-emerald-400 transition relative" />
       </Link>
 
       {nwPoints.length >= 2 && (

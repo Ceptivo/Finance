@@ -9,6 +9,7 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WealthShieldRouteImport } from './routes/wealth-shield'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
@@ -36,6 +37,11 @@ import { Route as BusinessesIdRouteImport } from './routes/businesses.$id'
 import { Route as ApiPaystackWebhookRouteImport } from './routes/api.paystack-webhook'
 import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 
+const WealthShieldRoute = WealthShieldRouteImport.update({
+  id: '/wealth-shield',
+  path: '/wealth-shield',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
   id: '/subscriptions',
   path: '/subscriptions',
@@ -189,6 +195,7 @@ export interface FileRoutesByFullPath {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
@@ -216,6 +223,7 @@ export interface FileRoutesByTo {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
@@ -245,6 +253,7 @@ export interface FileRoutesById {
   '/reports': typeof ReportsRoute
   '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
@@ -275,6 +284,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/api/paystack-webhook'
     | '/businesses/$id'
@@ -302,6 +312,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/api/paystack-webhook'
     | '/businesses/$id'
@@ -330,6 +341,7 @@ export interface FileRouteTypes {
     | '/reports'
     | '/settings'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/api/paystack-webhook'
     | '/businesses/$id'
@@ -359,11 +371,19 @@ export interface RootRouteChildren {
   ReportsRoute: typeof ReportsRoute
   SettingsRoute: typeof SettingsRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
+  WealthShieldRoute: typeof WealthShieldRoute
   ApiPaystackWebhookRoute: typeof ApiPaystackWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wealth-shield': {
+      id: '/wealth-shield'
+      path: '/wealth-shield'
+      fullPath: '/wealth-shield'
+      preLoaderRoute: typeof WealthShieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subscriptions': {
       id: '/subscriptions'
       path: '/subscriptions'
@@ -609,6 +629,7 @@ const rootRouteChildren: RootRouteChildren = {
   ReportsRoute: ReportsRoute,
   SettingsRoute: SettingsRoute,
   SubscriptionsRoute: SubscriptionsRoute,
+  WealthShieldRoute: WealthShieldRoute,
   ApiPaystackWebhookRoute: ApiPaystackWebhookRoute,
 }
 export const routeTree = rootRouteImport

@@ -12,6 +12,8 @@ import {
   Tag,
   Target,
   Crown,
+  ShieldCheck,
+  Settings as SettingsIcon,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -39,10 +41,10 @@ const nav = [
   },
   { to: "/investments", label: "Invest", icon: TrendingUp, match: ["/investments"] },
   {
-    to: "/goals",
+    to: "/wealth-shield",
     label: "Planning",
     icon: Target,
-    match: ["/goals", "/forecast", "/financial-profile"],
+    match: ["/wealth-shield", "/goals", "/forecast", "/financial-profile"],
   },
   {
     to: "/analytics",
@@ -196,6 +198,34 @@ export function AppLayout() {
           onClick={() => setOpen(false)}
         />
       )}
+
+      {/* Mobile bottom navigation (hidden on desktop) */}
+      <nav className="lg:hidden fixed bottom-0 inset-x-0 z-40 glass-strong border-t border-border grid grid-cols-5 h-16 pb-[env(safe-area-inset-bottom)]">
+        {[
+          { to: "/", label: "Home", icon: LayoutDashboard },
+          { to: "/expenses", label: "Money", icon: Wallet },
+          { to: "/investments", label: "Invest", icon: TrendingUp },
+          { to: "/wealth-shield", label: "Shield", icon: ShieldCheck },
+          { to: "/settings", label: "Settings", icon: SettingsIcon },
+        ].map((item) => {
+          const active =
+            item.to === "/" ? loc.pathname === "/" : loc.pathname.startsWith(item.to);
+          const Icon = item.icon;
+          return (
+            <Link
+              key={item.to}
+              to={item.to}
+              className={cn(
+                "flex flex-col items-center justify-center gap-0.5 text-[10px] transition-smooth",
+                active ? "text-primary" : "text-muted-foreground",
+              )}
+            >
+              <Icon className="size-5" />
+              {item.label}
+            </Link>
+          );
+        })}
+      </nav>
 
       <AddFAB />
     </div>

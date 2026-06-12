@@ -15,7 +15,7 @@ export const getTFSASummary = createServerFn({ method: "GET" })
       .eq("id", userId)
       .single();
 
-    const used = Number(profile?.current_tfsa_contribution || 0);
+    const used = Number((profile as any)?.current_tfsa_contribution || 0);
     const remaining = Math.max(0, SA_TFSA_ANNUAL_LIMIT - used);
     const percentUsed = (used / SA_TFSA_ANNUAL_LIMIT) * 100;
 
@@ -25,7 +25,7 @@ export const getTFSASummary = createServerFn({ method: "GET" })
       percentUsed,
       limit: SA_TFSA_ANNUAL_LIMIT,
       isOverLimit: used > SA_TFSA_ANNUAL_LIMIT,
-      penaltyRisk: used > SA_TFSA_ANNUAL_LIMIT ? (used - SA_TFSA_ANNUAL_LIMIT) * 0.4 : 0
+      penaltyRisk: used > SA_TFSA_ANNUAL_LIMIT ? (used - SA_TFSA_ANNUAL_LIMIT) * 0.4 : 0,
     };
   });
 

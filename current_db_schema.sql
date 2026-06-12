@@ -7,9 +7,35 @@ CREATE TABLE IF NOT EXISTS public.profiles (
   id uuid REFERENCES auth.users ON DELETE CASCADE PRIMARY KEY,
   currency text DEFAULT 'ZAR',
   savings_goal numeric DEFAULT 0,
+  current_tfsa_contribution numeric DEFAULT 0, -- ZAR contributed this tax year (R36,000 limit)
   full_name text,
   avatar_url text,
   updated_at timestamp with time zone DEFAULT now()
+);
+
+-- WEALTH SHIELD: Debt Payoff Engine
+CREATE TABLE IF NOT EXISTS public.debts (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  balance numeric NOT NULL DEFAULT 0,
+  interest_rate numeric NOT NULL DEFAULT 0,   -- annual %, e.g. 21.5
+  minimum_payment numeric NOT NULL DEFAULT 0, -- ZAR per month
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
+);
+
+-- WEALTH SHIELD: Recurring Bills Calendar
+CREATE TABLE IF NOT EXISTS public.recurring_bills (
+  id uuid PRIMARY KEY DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  name text NOT NULL,
+  amount numeric NOT NULL DEFAULT 0,          -- ZAR
+  due_day int NOT NULL CHECK (due_day BETWEEN 1 AND 31),
+  category text,
+  is_active boolean NOT NULL DEFAULT true,
+  created_at timestamptz NOT NULL DEFAULT now(),
+  updated_at timestamptz NOT NULL DEFAULT now()
 );
 
 CREATE TABLE IF NOT EXISTS public.users_financial_profiles (
@@ -196,17 +222,23 @@ CREATE TABLE IF NOT EXISTS public.plaid_items (
 -- SECURITY: SPECIFIC ROW LEVEL SECURITY (RLS)
 -- ===================================================
 
--- Standard Tables: User can see/edit everything they own
-DO $$ 
-DECLARE 
+-- Per-table policies (explicit — no blanket loop). Every policy carries
+-- both USING and WITH CHECK so rows can never be read or written across users.
+DO $$
+DECLARE
   t text;
 BEGIN
-  FOR t IN SELECT tablename FROM pg_tables WHERE schemaname = 'public' 
-           AND tablename NOT IN ('profiles', 'plaid_items', 'app_subscriptions')
-  LOOP
+  FOREACH t IN ARRAY ARRAY[
+    'users_financial_profiles','accounts','incomes','expenses',
+    'portfolio_holdings','custom_markets','investment_goals','budgets',
+    'net_worth_snapshots','categories','ai_recommendations',
+    'financial_health_scores','past_statements','subscriptions',
+    'debts','recurring_bills'
+  ] LOOP
     EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY', t);
     EXECUTE format('DROP POLICY IF EXISTS "user_access" ON public.%I', t);
-    EXECUTE format('CREATE POLICY "user_access" ON public.%I FOR ALL USING (auth.uid() = user_id)', t);
+    EXECUTE format(
+      'CREATE POLICY "user_access" ON public.%I FOR ALL TO authenticated USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)', t);
   END LOOP;
 END $$;
 
@@ -224,5 +256,13 @@ CREATE POLICY "sub_read" ON public.app_subscriptions FOR SELECT USING (auth.uid(
 ALTER TABLE public.plaid_items ENABLE ROW LEVEL SECURITY;
 DROP POLICY IF EXISTS "no_public_plaid" ON public.plaid_items;
 -- No policy added = accessible only by Service Role (The "Unhackable" standard)
+
+-- SENSITIVE: Plaid transaction dedupe ledger (Service Role only)
+CREATE TABLE IF NOT EXISTS public.plaid_transactions (
+  id text PRIMARY KEY,
+  user_id uuid NOT NULL REFERENCES auth.users(id) ON DELETE CASCADE,
+  created_at timestamptz NOT NULL DEFAULT now()
+);
+ALTER TABLE public.plaid_transactions ENABLE ROW LEVEL SECURITY;
 
 NOTIFY pgrst, 'reload schema';

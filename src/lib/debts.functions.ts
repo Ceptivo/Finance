@@ -14,7 +14,9 @@ export const saveDebt = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => DebtSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { error } = await supabase.from("debts" as never).insert({ ...data, user_id: userId } as never);
+    const { error } = await supabase
+      .from("debts" as never)
+      .insert({ ...data, user_id: userId } as never);
     if (error) throw new Error(error.message);
     return { ok: true };
   });
@@ -22,20 +24,29 @@ export const saveDebt = createServerFn({ method: "POST" })
 export const listDebts = createServerFn({ method: "GET" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
-    const { data } = await context.supabase.from("debts" as never).select("*").eq("user_id", context.userId);
+    const { data } = await context.supabase
+      .from("debts" as never)
+      .select("*")
+      .eq("user_id", context.userId);
     return { debts: data || [] };
   });
 
 export const calculatePayoffPlan = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
-  .inputValidator((d: unknown) => z.object({ strategy: z.enum(["snowball", "avalanche"]), extraPayment: z.number() }).parse(d))
+  .inputValidator((d: unknown) =>
+    z.object({ strategy: z.enum(["snowball", "avalanche"]), extraPayment: z.number() }).parse(d),
+  )
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
-    const { data: debts } = await supabase.from("debts" as never).select("*").eq("user_id", userId);
-    
-    if (!debts || debts.length === 0) return { schedule: [] };
+    const { data: debts } = await supabase
+      .from("debts" as never)
+      .select("*")
+      .eq("user_id", userId);
 
-    let sortedDebts = [...debts];
+    const rows = (debts ?? []) as any[];
+    if (rows.length === 0) return { schedule: [] };
+
+    let sortedDebts = [...rows];
     if (data.strategy === "snowball") {
       sortedDebts.sort((a, b) => a.balance - b.balance);
     } else {
@@ -43,10 +54,10 @@ export const calculatePayoffPlan = createServerFn({ method: "POST" })
     }
 
     let schedule = [];
-    let currentDebts = sortedDebts.map(d => ({ ...d, currentBalance: Number(d.balance) }));
+    let currentDebts = sortedDebts.map((d) => ({ ...d, currentBalance: Number(d.balance) }));
     let month = 0;
 
-    while (currentDebts.some(d => d.currentBalance > 0) && month < 360) {
+    while (currentDebts.some((d) => d.currentBalance > 0) && month < 360) {
       month++;
       let totalExtra = data.extraPayment;
       let monthTotalInterest = 0;
@@ -72,7 +83,7 @@ export const calculatePayoffPlan = createServerFn({ method: "POST" })
       schedule.push({
         month,
         remaining: currentDebts.reduce((sum, d) => sum + d.currentBalance, 0),
-        interestPaid: monthTotalInterest
+        interestPaid: monthTotalInterest,
       });
     }
 

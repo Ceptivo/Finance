@@ -20,6 +20,7 @@ export const SECTIONS: Array<{
   {
     label: "Planning",
     tabs: [
+      { to: "/wealth-shield", label: "Wealth Shield" },
       { to: "/goals", label: "Goals" },
       { to: "/forecast", label: "Cash Flow" },
       { to: "/financial-profile", label: "Profile" },
