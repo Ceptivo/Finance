@@ -1,7 +1,8 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
-import { aiPrompt, parseJsonReply } from "./ai.server";
+import { aiText, parseJsonReply } from "./ai.server";
+import { requirePremium } from "./premium.server";
 
 const CoachingSchema = z.object({
   overall_grade: z.string().default("B"),
@@ -34,6 +35,7 @@ export const generateCoachingReport = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => z.object({ id: z.string().uuid() }).parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePremium(supabase, userId, (context as any).claims);
     const { data: row, error } = await supabase
       .from("past_statements" as never)
       .select("*")
@@ -82,7 +84,11 @@ Return STRICT minified JSON only (no prose, no markdown fences) matching:
 
 Be specific with numbers, use the actual currency, no fluff.`;
 
-    const text = await aiPrompt(prompt, undefined, undefined, userId);
+    const text = await aiText({
+      rateKey: userId,
+      tier: "deep",
+      messages: [{ role: "user", content: prompt }],
+    });
     let report: CoachingReport;
     try {
       report = CoachingSchema.parse(parseJsonReply(text));

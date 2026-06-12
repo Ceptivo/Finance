@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { aiText, imageBlock, pdfBlock, parseJsonReply } from "./ai.server";
+import { requirePremium } from "./premium.server";
 
 const EXPENSE_CATS = [
   "Food","Groceries","Rent","Transport","Utilities","Entertainment",
@@ -69,8 +70,10 @@ Schema:
 Rules: amounts always positive numbers, classify income vs expense correctly, identify recurring charges as subscriptions, infer reasonable categories.`;
 
     const { supabase, userId } = context;
+    await requirePremium(supabase, userId, (context as any).claims);
     const text = await aiText({
       rateKey: userId,
+      tier: "deep",
       system: systemPrompt,
       maxTokens: 64000,
       messages: [

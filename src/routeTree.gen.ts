@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as ReportsRouteImport } from './routes/reports'
+import { Route as PremiumRouteImport } from './routes/premium'
 import { Route as PipelineRouteImport } from './routes/pipeline'
 import { Route as PastFinancesRouteImport } from './routes/past-finances'
 import { Route as InvestmentsRouteImport } from './routes/investments'
@@ -31,6 +32,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as PastFinancesIndexRouteImport } from './routes/past-finances.index'
 import { Route as PastFinancesIdRouteImport } from './routes/past-finances.$id'
 import { Route as BusinessesIdRouteImport } from './routes/businesses.$id'
+import { Route as ApiPaystackWebhookRouteImport } from './routes/api.paystack-webhook'
 import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
@@ -41,6 +43,11 @@ const SubscriptionsRoute = SubscriptionsRouteImport.update({
 const ReportsRoute = ReportsRouteImport.update({
   id: '/reports',
   path: '/reports',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PremiumRoute = PremiumRouteImport.update({
+  id: '/premium',
+  path: '/premium',
   getParentRoute: () => rootRouteImport,
 } as any)
 const PipelineRoute = PipelineRouteImport.update({
@@ -143,6 +150,11 @@ const BusinessesIdRoute = BusinessesIdRouteImport.update({
   path: '/$id',
   getParentRoute: () => BusinessesRoute,
 } as any)
+const ApiPaystackWebhookRoute = ApiPaystackWebhookRouteImport.update({
+  id: '/api/paystack-webhook',
+  path: '/api/paystack-webhook',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AccountsIdRoute = AccountsIdRouteImport.update({
   id: '/$id',
   path: '/$id',
@@ -167,9 +179,11 @@ export interface FileRoutesByFullPath {
   '/investments': typeof InvestmentsRoute
   '/past-finances': typeof PastFinancesRouteWithChildren
   '/pipeline': typeof PipelineRoute
+  '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
+  '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
   '/past-finances/': typeof PastFinancesIndexRoute
@@ -191,9 +205,11 @@ export interface FileRoutesByTo {
   '/goals': typeof GoalsRoute
   '/investments': typeof InvestmentsRoute
   '/pipeline': typeof PipelineRoute
+  '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
+  '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
   '/past-finances': typeof PastFinancesIndexRoute
@@ -217,9 +233,11 @@ export interface FileRoutesById {
   '/investments': typeof InvestmentsRoute
   '/past-finances': typeof PastFinancesRouteWithChildren
   '/pipeline': typeof PipelineRoute
+  '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
+  '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
   '/past-finances/': typeof PastFinancesIndexRoute
@@ -244,9 +262,11 @@ export interface FileRouteTypes {
     | '/investments'
     | '/past-finances'
     | '/pipeline'
+    | '/premium'
     | '/reports'
     | '/subscriptions'
     | '/accounts/$id'
+    | '/api/paystack-webhook'
     | '/businesses/$id'
     | '/past-finances/$id'
     | '/past-finances/'
@@ -268,9 +288,11 @@ export interface FileRouteTypes {
     | '/goals'
     | '/investments'
     | '/pipeline'
+    | '/premium'
     | '/reports'
     | '/subscriptions'
     | '/accounts/$id'
+    | '/api/paystack-webhook'
     | '/businesses/$id'
     | '/past-finances/$id'
     | '/past-finances'
@@ -293,9 +315,11 @@ export interface FileRouteTypes {
     | '/investments'
     | '/past-finances'
     | '/pipeline'
+    | '/premium'
     | '/reports'
     | '/subscriptions'
     | '/accounts/$id'
+    | '/api/paystack-webhook'
     | '/businesses/$id'
     | '/past-finances/$id'
     | '/past-finances/'
@@ -319,8 +343,10 @@ export interface RootRouteChildren {
   InvestmentsRoute: typeof InvestmentsRoute
   PastFinancesRoute: typeof PastFinancesRouteWithChildren
   PipelineRoute: typeof PipelineRoute
+  PremiumRoute: typeof PremiumRoute
   ReportsRoute: typeof ReportsRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
+  ApiPaystackWebhookRoute: typeof ApiPaystackWebhookRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -337,6 +363,13 @@ declare module '@tanstack/react-router' {
       path: '/reports'
       fullPath: '/reports'
       preLoaderRoute: typeof ReportsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/premium': {
+      id: '/premium'
+      path: '/premium'
+      fullPath: '/premium'
+      preLoaderRoute: typeof PremiumRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/pipeline': {
@@ -479,6 +512,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessesIdRouteImport
       parentRoute: typeof BusinessesRoute
     }
+    '/api/paystack-webhook': {
+      id: '/api/paystack-webhook'
+      path: '/api/paystack-webhook'
+      fullPath: '/api/paystack-webhook'
+      preLoaderRoute: typeof ApiPaystackWebhookRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/accounts/$id': {
       id: '/accounts/$id'
       path: '/$id'
@@ -545,8 +585,10 @@ const rootRouteChildren: RootRouteChildren = {
   InvestmentsRoute: InvestmentsRoute,
   PastFinancesRoute: PastFinancesRouteWithChildren,
   PipelineRoute: PipelineRoute,
+  PremiumRoute: PremiumRoute,
   ReportsRoute: ReportsRoute,
   SubscriptionsRoute: SubscriptionsRoute,
+  ApiPaystackWebhookRoute: ApiPaystackWebhookRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

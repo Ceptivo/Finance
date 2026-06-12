@@ -41,20 +41,31 @@ net-worth tables and adds performance indexes. The app works without it,
 but budgets, net-worth history, and no-double-post subscription tracking
 need it.
 
-### AI features (optional)
+### AI features + Premium subscription
 
-Receipt scanning, AI coaching, investment strategy/chat/ideas, statement
-parsing, and the daily report run on the Claude API. Set the server-side
-environment variables:
+All AI features (receipt scanning, coaching, strategy, chat, ideas,
+statement parsing, daily report) run on the Claude API — **Haiku 4.5 by
+default** (fastest/cheapest) — and are gated behind the in-app Premium
+subscription (R100/month via Paystack). Server env vars:
 
 ```sh
-ANTHROPIC_API_KEY=<your key>      # get one at console.anthropic.com
-ANTHROPIC_MODEL=claude-opus-4-8   # optional; e.g. claude-haiku-4-5 for lower cost
+ANTHROPIC_API_KEY=<key>                  # console.anthropic.com — required for AI
+ANTHROPIC_MODEL=claude-haiku-4-5         # optional override for all features
+ANTHROPIC_MODEL_DEEP=claude-haiku-4-5    # optional override for statement parsing + coaching only
+AI_RATE_LIMIT=30                         # optional, AI calls per 10 min per user
+AI_DAILY_LIMIT=150                       # optional, AI calls per day per user
+
+PAYSTACK_SECRET_KEY=sk_live_...          # dashboard.paystack.com → Settings → API Keys
+PAYSTACK_PLAN_CODE=PLN_...               # optional: a R100/month Plan for auto-renewal
+SUPABASE_SERVICE_ROLE_KEY=...            # Supabase → Settings → API (server-only!)
+OWNER_EMAILS=you@example.com             # comma-separated; owners bypass the paywall
+PREMIUM_ENFORCE=true                     # force the paywall on/off explicitly
 ```
 
-Without a key, those features show a clear error toast; everything else
-works normally. Live market data needs **no key at all** (Yahoo Finance);
-set `FINNHUB_API_KEY` optionally as a fallback quote source.
+The paywall enforces automatically once `PAYSTACK_SECRET_KEY` is set
+(owners excluded). Register the webhook URL
+`https://<your-domain>/api/paystack-webhook` in Paystack for auto-renewals.
+Live market data needs **no key at all** (Yahoo Finance).
 
 ## Scripts
 

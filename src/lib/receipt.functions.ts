@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { aiText, imageBlock, parseJsonReply } from "./ai.server";
+import { requirePremium } from "./premium.server";
 
 const InputSchema = z.object({
   imageBase64: z.string().min(20).max(8_000_000),
@@ -25,6 +26,7 @@ export const parseReceipt = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .inputValidator((d: unknown) => InputSchema.parse(d))
   .handler(async ({ data, context }) => {
+    await requirePremium(context.supabase, context.userId, (context as any).claims);
     const today = new Date().toISOString().slice(0, 10);
     const text = await aiText({
       rateKey: context.userId,

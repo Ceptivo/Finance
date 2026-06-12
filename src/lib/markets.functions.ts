@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { aiPrompt, parseJsonReply } from "./ai.server";
+import { requirePremium } from "./premium.server";
 import { getQuote, getQuotes, getHistory } from "./market-data.server";
 
 /* ---------------- Live quotes (Yahoo Finance, no API key needed) ---------------- */
@@ -238,6 +239,7 @@ export const getInvestmentIdeas = createServerFn({ method: "POST" })
     z.object({ riskTolerance: z.string().max(40).optional() }).parse(d ?? {}),
   )
   .handler(async ({ data, context }) => {
+    await requirePremium(context.supabase, context.userId, context.claims as any);
     const risk = data.riskTolerance || "Moderate";
     const today = new Date().toISOString().slice(0, 10);
 

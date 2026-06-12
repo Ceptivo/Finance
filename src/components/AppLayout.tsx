@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, DollarSign, Briefcase, Repeat, Receipt, BarChart3,
-  TrendingUp, FileText, Sparkles, Menu, X, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, PiggyBank,
+  TrendingUp, FileText, Sparkles, Menu, X, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, PiggyBank, Crown,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -27,6 +27,7 @@ const nav = [
   { to: "/reports", label: "Reports", icon: FileText },
   { to: "/past-finances", label: "Past Finances", icon: History },
   { to: "/categories", label: "Categories", icon: Tag },
+  { to: "/premium", label: "Premium", icon: Crown },
 ] as const;
 
 export function AppLayout() {

@@ -2,6 +2,7 @@ import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { aiText, aiPrompt, parseJsonReply } from "./ai.server";
+import { requirePremium } from "./premium.server";
 
 const ProfileSchema = z.object({
   age: z.number().int().min(10).max(120).nullable().optional(),
@@ -81,6 +82,7 @@ export const generateStrategy = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    await requirePremium(supabase, userId, context.claims as any);
     const { data: profile } = await supabase
       .from("users_financial_profiles" as never)
       .select("*")
@@ -186,6 +188,7 @@ export const askAssistant = createServerFn({ method: "POST" })
   .inputValidator((d: unknown) => ChatSchema.parse(d))
   .handler(async ({ data, context }) => {
     const { supabase, userId } = context;
+    await requirePremium(supabase, userId, context.claims as any);
     const [{ data: profile }, { data: goals }, { data: score }] = await Promise.all([
       supabase.from("users_financial_profiles" as never).select("*").eq("user_id", userId).maybeSingle(),
       supabase.from("investment_goals" as never).select("*").eq("user_id", userId),

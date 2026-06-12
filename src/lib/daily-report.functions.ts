@@ -1,11 +1,13 @@
 import { createServerFn } from "@tanstack/react-start";
 import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { aiText } from "./ai.server";
+import { requirePremium } from "./premium.server";
 
 export const generateDailyReport = createServerFn({ method: "POST" })
   .middleware([requireSupabaseAuth])
   .handler(async ({ context }) => {
     const { supabase, userId } = context;
+    await requirePremium(supabase, userId, (context as any).claims);
     const since = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
 
     const [{ data: incs }, { data: exps }, { data: subs }, { data: accts }] = await Promise.all([

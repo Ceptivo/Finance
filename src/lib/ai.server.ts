@@ -13,8 +13,18 @@ export function anthropicClient() {
   return new Anthropic({ apiKey });
 }
 
-export function aiModel() {
-  return process.env.ANTHROPIC_MODEL || "claude-opus-4-8";
+// All features run on Haiku 4.5 (fast + cheapest) by default. Heavier
+// features (statement parsing, coaching) read the "deep" tier so you can
+// upgrade just those later, e.g. ANTHROPIC_MODEL_DEEP=claude-sonnet-4-6.
+export type AiTier = "fast" | "deep";
+
+export function aiModel(tier: AiTier = "fast") {
+  if (tier === "deep") {
+    return (
+      process.env.ANTHROPIC_MODEL_DEEP || process.env.ANTHROPIC_MODEL || "claude-haiku-4-5"
+    );
+  }
+  return process.env.ANTHROPIC_MODEL || "claude-haiku-4-5";
 }
 
 // Adaptive thinking is only accepted on Fable/Mythos 5, Opus 4.6+, Sonnet 4.6 —
@@ -31,13 +41,18 @@ function supportsAdaptiveThinking(model: string) {
 
 const AI_RATE_LIMIT = Number(process.env.AI_RATE_LIMIT) || 30;
 const AI_RATE_WINDOW_MS = Number(process.env.AI_RATE_WINDOW_MS) || 10 * 60_000;
+const AI_DAILY_LIMIT = Number(process.env.AI_DAILY_LIMIT) || 150;
 const aiCalls = new Map<string, number[]>();
 
 export function checkAiRateLimit(key: string) {
   const now = Date.now();
-  const calls = (aiCalls.get(key) ?? []).filter((t) => now - t < AI_RATE_WINDOW_MS);
-  if (calls.length >= AI_RATE_LIMIT) {
+  const calls = (aiCalls.get(key) ?? []).filter((t) => now - t < 24 * 3600_000);
+  const recent = calls.filter((t) => now - t < AI_RATE_WINDOW_MS);
+  if (recent.length >= AI_RATE_LIMIT) {
     throw new Error("AI rate limit reached — please wait a few minutes and try again.");
+  }
+  if (calls.length >= AI_DAILY_LIMIT) {
+    throw new Error("Daily AI limit reached — try again tomorrow.");
   }
   calls.push(now);
   aiCalls.set(key, calls);
@@ -50,13 +65,15 @@ export interface AiTextOptions {
   maxTokens?: number;
   /** Rate-limit key — pass the authenticated userId. */
   rateKey?: string;
+  /** Model tier: "fast" (default, Haiku) or "deep" for heavier reasoning. */
+  tier?: AiTier;
 }
 
 /** Run a Claude request and return the concatenated text output. */
 export async function aiText(opts: AiTextOptions): Promise<string> {
   if (opts.rateKey) checkAiRateLimit(opts.rateKey);
   const client = anthropicClient();
-  const model = aiModel();
+  const model = aiModel(opts.tier ?? "fast");
 
   const stream = client.messages.stream({
     model,
