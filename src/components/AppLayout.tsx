@@ -1,7 +1,17 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
-  LayoutDashboard, DollarSign, Briefcase, Repeat, Receipt, BarChart3,
-  TrendingUp, FileText, Sparkles, Menu, X, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, PiggyBank, Crown,
+  LayoutDashboard,
+  Briefcase,
+  BarChart3,
+  TrendingUp,
+  Sparkles,
+  Menu,
+  X,
+  LogOut,
+  Wallet,
+  Tag,
+  Target,
+  Crown,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -10,24 +20,39 @@ import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 import { AddFAB } from "@/components/AddFAB";
 import { GlobalSearch } from "@/components/GlobalSearch";
+import { SectionTabs } from "@/components/SectionTabs";
 
+// Merged-tabs navigation: each section entry lands on its first tab; the
+// SectionTabs bar above page content switches between the section's pages.
 const nav = [
-  { to: "/", label: "Dashboard", icon: LayoutDashboard },
-  { to: "/accounts", label: "Accounts", icon: Wallet },
-  { to: "/businesses", label: "Businesses", icon: Briefcase },
-  { to: "/earnings", label: "Income", icon: DollarSign },
-  { to: "/expenses", label: "Expenses", icon: Receipt },
-  { to: "/subscriptions", label: "Subscriptions", icon: Repeat },
-  { to: "/budgets", label: "Budgets", icon: PiggyBank },
-  { to: "/investments", label: "AI Investment Hub", icon: TrendingUp },
-  { to: "/financial-profile", label: "Financial Profile", icon: UserCog },
-  { to: "/goals", label: "Goals", icon: Target },
-  { to: "/analytics", label: "Analytics", icon: BarChart3 },
-  { to: "/forecast", label: "Cash Flow", icon: LineChart },
-  { to: "/reports", label: "Reports", icon: FileText },
-  { to: "/past-finances", label: "Past Finances", icon: History },
-  { to: "/categories", label: "Categories", icon: Tag },
-  { to: "/premium", label: "Premium", icon: Crown },
+  { to: "/", label: "Dashboard", icon: LayoutDashboard, match: ["/"] },
+  {
+    to: "/accounts",
+    label: "Money",
+    icon: Wallet,
+    match: ["/accounts", "/earnings", "/expenses", "/subscriptions", "/budgets"],
+  },
+  { to: "/investments", label: "Invest", icon: TrendingUp, match: ["/investments"] },
+  {
+    to: "/goals",
+    label: "Planning",
+    icon: Target,
+    match: ["/goals", "/forecast", "/financial-profile"],
+  },
+  {
+    to: "/analytics",
+    label: "Insights",
+    icon: BarChart3,
+    match: ["/analytics", "/reports", "/past-finances"],
+  },
+  {
+    to: "/businesses",
+    label: "Business",
+    icon: Briefcase,
+    match: ["/businesses", "/clients", "/pipeline"],
+  },
+  { to: "/categories", label: "Categories", icon: Tag, match: ["/categories"] },
+  { to: "/premium", label: "Premium", icon: Crown, match: ["/premium"] },
 ] as const;
 
 export function AppLayout() {
@@ -52,7 +77,7 @@ export function AppLayout() {
           "fixed lg:sticky top-0 left-0 z-40 h-screen w-64 shrink-0",
           "glass-strong border-r border-sidebar-border",
           "transition-transform duration-300",
-          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0"
+          open ? "translate-x-0" : "-translate-x-full lg:translate-x-0",
         )}
       >
         <div className="flex items-center gap-2 px-5 h-16 border-b border-sidebar-border">
@@ -66,9 +91,11 @@ export function AppLayout() {
         </div>
         <nav className="px-3 py-4 space-y-1">
           {nav.map((item) => {
-            const active = item.to === "/"
-              ? loc.pathname === "/"
-              : loc.pathname === item.to || loc.pathname.startsWith(item.to + "/");
+            const active = item.match.some((m) =>
+              m === "/"
+                ? loc.pathname === "/"
+                : loc.pathname === m || loc.pathname.startsWith(m + "/"),
+            );
             const Icon = item.icon;
             return (
               <Link
@@ -79,12 +106,14 @@ export function AppLayout() {
                   "flex items-center gap-3 rounded-lg px-3 py-2 text-sm transition-smooth",
                   active
                     ? "bg-accent text-accent-foreground shadow-elegant"
-                    : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent"
+                    : "text-sidebar-foreground/80 hover:text-sidebar-foreground hover:bg-sidebar-accent",
                 )}
               >
                 <Icon className="size-4" />
                 <span>{item.label}</span>
-                {active && <span className="ml-auto size-1.5 rounded-full bg-primary shadow-glow" />}
+                {active && (
+                  <span className="ml-auto size-1.5 rounded-full bg-primary shadow-glow" />
+                )}
               </Link>
             );
           })}
@@ -99,7 +128,11 @@ export function AppLayout() {
                 <div className="font-medium truncate">{session.user.email}</div>
                 <div className="text-muted-foreground text-[10px]">Owner</div>
               </div>
-              <button onClick={logout} className="p-1.5 rounded-md hover:bg-accent" aria-label="Sign out">
+              <button
+                onClick={logout}
+                className="p-1.5 rounded-md hover:bg-accent"
+                aria-label="Sign out"
+              >
                 <LogOut className="size-4" />
               </button>
             </div>
@@ -125,10 +158,12 @@ export function AppLayout() {
         </header>
 
         <main className="p-4 lg:p-8 animate-fade-in">
+          <SectionTabs />
           <Outlet />
         </main>
         <footer className="px-4 lg:px-8 pb-24 lg:pb-6 text-[11px] text-muted-foreground/80 max-w-4xl">
-          Educational financial information only · Not regulated financial advice · Consult a qualified financial professional before making investment decisions.
+          Educational financial information only · Not regulated financial advice · Consult a
+          qualified financial professional before making investment decisions.
         </footer>
       </div>
 
