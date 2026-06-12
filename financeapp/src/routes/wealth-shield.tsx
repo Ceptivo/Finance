@@ -1,7 +1,8 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { useState } from "react";
 import {
   Shield, TrendingDown, TrendingUp, AlertTriangle, CheckCircle2,
-  ChevronRight, Target, Wallet, BarChart3, RefreshCw,
+  ChevronRight, Target, Wallet, BarChart3, RefreshCw, Eye, EyeOff,
 } from "lucide-react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
@@ -14,8 +15,23 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/wealth-shield")({ component: WealthShield });
 
+// South African CPI annual rates (approximate historical averages)
+const SA_CPI_RATES: Record<number, number> = {
+  2020: 0.034, 2021: 0.044, 2022: 0.069, 2023: 0.060, 2024: 0.053, 2025: 0.047,
+};
+function realValue(nominal: number, fromYear: number, toYear: number): number {
+  let v = nominal;
+  for (let y = fromYear; y < toYear; y++) {
+    const rate = SA_CPI_RATES[y] ?? 0.055;
+    v = v / (1 + rate);
+  }
+  return v;
+}
+
 function WealthShield() {
   const qc = useQueryClient();
+  const [purchasingPowerOn, setPurchasingPowerOn] = useState(false);
+  const [baseYear, setBaseYear] = useState(2023);
 
   const { items: accounts } = useAccounts();
   const { items: incomes } = useIncomes();
@@ -325,6 +341,93 @@ function WealthShield() {
             <Link to="/financial-profile" className="inline-flex items-center gap-2 px-4 py-2 rounded-xl gradient-primary text-primary-foreground text-sm font-medium shadow-glow">
               <Target className="size-4" /> Complete Profile
             </Link>
+          </div>
+        )}
+      </div>
+
+      {/* ── Purchasing Power Mirror ───────────────────────────────── */}
+      <div className="glass rounded-2xl p-5 shadow-elegant">
+        <div className="flex items-center justify-between mb-1">
+          <div className="flex items-center gap-2">
+            <Eye className="size-4 text-primary" />
+            <h2 className="font-semibold">Purchasing Power Mirror</h2>
+          </div>
+          <button
+            onClick={() => setPurchasingPowerOn(v => !v)}
+            className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer items-center rounded-full transition-colors ${purchasingPowerOn ? "bg-primary" : "bg-muted"}`}
+          >
+            <span className={`pointer-events-none inline-block h-5 w-5 rounded-full bg-white shadow-md transform transition-transform ${purchasingPowerOn ? "translate-x-5" : "translate-x-0.5"}`} />
+          </button>
+        </div>
+        <p className="text-xs text-muted-foreground mb-4">
+          Because of South Africa's inflation, R1 000 today is worth less than R1 000 in {baseYear}. Toggle to see your wealth in real terms.
+        </p>
+
+        {purchasingPowerOn ? (
+          <>
+            {/* Year picker */}
+            <div className="flex items-center gap-2 mb-4 flex-wrap">
+              <span className="text-xs text-muted-foreground">Show in</span>
+              {[2020, 2021, 2022, 2023].map(y => (
+                <button
+                  key={y}
+                  onClick={() => setBaseYear(y)}
+                  className={`px-3 py-1 rounded-lg text-xs font-medium transition ${baseYear === y ? "gradient-primary text-primary-foreground shadow-glow" : "glass border border-border/60 text-muted-foreground"}`}
+                >
+                  {y} Rands
+                </button>
+              ))}
+            </div>
+
+            {/* Comparison table */}
+            <div className="space-y-3">
+              {[
+                { label: "Total Account Balance", nominal: totalNetWorth },
+                { label: "Emergency Fund", nominal: emergencyFund },
+                { label: "Portfolio Value", nominal: portfolioValue },
+              ].map(({ label, nominal }) => {
+                const currentYear = new Date().getFullYear();
+                const real = realValue(nominal, baseYear, currentYear);
+                const loss = nominal - real;
+                const lossPct = nominal > 0 ? ((loss / nominal) * 100).toFixed(0) : "0";
+
+                return (
+                  <div key={label} className="rounded-xl border border-border/60 p-4"
+                    style={{ background: "oklch(0.18 0.008 155 / 0.4)" }}>
+                    <div className="flex items-center justify-between flex-wrap gap-2">
+                      <div className="text-sm font-medium">{label}</div>
+                      <div className="flex items-center gap-2 flex-wrap text-right">
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">Nominal (today)</div>
+                          <div className="text-base font-bold tabular-nums">{fmtMoney(nominal)}</div>
+                        </div>
+                        <div className="text-muted-foreground/40 text-xs">→</div>
+                        <div>
+                          <div className="text-[10px] text-muted-foreground">{baseYear} buying power</div>
+                          <div className="text-base font-bold tabular-nums text-amber-400">{fmtMoney(real)}</div>
+                        </div>
+                      </div>
+                    </div>
+                    {nominal > 0 && (
+                      <div className="mt-2 text-[11px] text-rose-400 flex items-center gap-1">
+                        <TrendingDown className="size-3" />
+                        Inflation has eroded {fmtMoney(loss)} ({lossPct}%) of purchasing power since {baseYear}.
+                        {Number(lossPct) > 15 && <span className="ml-1 text-muted-foreground">Consider investing to beat inflation.</span>}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-4 rounded-xl bg-amber-500/8 border border-amber-500/15 p-3 text-[11px] text-amber-300/80">
+              <strong>Beat inflation:</strong> South Africa's average CPI is ~5–7% per year. Money sitting in a savings account at 4% is actually losing real value. Consider Reg 28-compliant unit trusts, ETFs (Satrix, Sygnia), or tax-free savings accounts (TFSA) to preserve purchasing power.
+            </div>
+          </>
+        ) : (
+          <div className="rounded-xl border border-dashed border-border/60 p-6 text-center">
+            <EyeOff className="size-8 mx-auto text-muted-foreground/30 mb-2" />
+            <p className="text-sm text-muted-foreground">Toggle the switch to reveal your wealth in inflation-adjusted Rands</p>
           </div>
         )}
       </div>

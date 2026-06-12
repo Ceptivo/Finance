@@ -185,6 +185,129 @@ export function buildAnnualPerformanceReport(
   };
 }
 
+/* ---------------- SARS Tax Reports (SA tax year: 1 Mar – 28/29 Feb) ---------------- */
+
+function sarsTaxYear() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = now.getMonth(); // 0-indexed
+  // SA tax year ends Feb; if we're in Mar-Dec use current year as end, else prev year
+  return m >= 2 ? y : y - 1; // end year of the tax year
+}
+
+function inSarsTaxYear(date: string, endYear: number): boolean {
+  const start = `${endYear - 1}-03-01`;
+  const end = `${endYear}-02-28`;
+  return date >= start && date <= end;
+}
+
+export function buildSARSIncomeReport(incomes: IncomeEntry[], endYear?: number): ReportTable {
+  const ty = endYear ?? sarsTaxYear();
+  const items = incomes
+    .filter(i => inSarsTaxYear(i.date, ty))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const total = items.reduce((a, i) => a + i.amount, 0);
+  const byCat = new Map<string, number>();
+  for (const i of items) byCat.set(i.category, (byCat.get(i.category) ?? 0) + i.amount);
+
+  return {
+    title: "SARS Income Statement",
+    period: `1 March ${ty - 1} – 28 February ${ty} (Tax Year ${ty})`,
+    columns: ["Date", "Source / Description", "Category (SARS)", "Gross Amount (ZAR)", "Notes"],
+    rows: items.map(i => [
+      i.date,
+      i.source,
+      i.category,
+      fmtMoneyDecimal(i.amount),
+      i.note ?? "",
+    ]),
+    summary: [
+      `Total gross income: ${fmtMoneyDecimal(total)}`,
+      `Tax year: ${ty - 1}/${ty}`,
+      ...([...byCat.entries()].sort((a, b) => b[1] - a[1]).map(([c, v]) => `  ${c}: ${fmtMoneyDecimal(v)}`)),
+      "Note: Declare all income to SARS. This report is educational and not regulated tax advice.",
+    ],
+  };
+}
+
+export function buildSARSExpenseReport(expenses: ExpenseEntry[], endYear?: number): ReportTable {
+  const ty = endYear ?? sarsTaxYear();
+  const items = expenses
+    .filter(e => inSarsTaxYear(e.date, ty))
+    .sort((a, b) => a.date.localeCompare(b.date));
+  const total = items.reduce((a, e) => a + e.cost, 0);
+  const byCat = new Map<string, number>();
+  for (const e of items) byCat.set(e.category, (byCat.get(e.category) ?? 0) + e.cost);
+
+  const deductibleCats = new Set(["Business", "Health", "Travel", "Subscriptions"]);
+  const potentialDeductible = items
+    .filter(e => deductibleCats.has(e.category))
+    .reduce((a, e) => a + e.cost, 0);
+
+  return {
+    title: "SARS Expense Statement",
+    period: `1 March ${ty - 1} – 28 February ${ty} (Tax Year ${ty})`,
+    columns: ["Date", "Merchant / Description", "Category", "Amount (ZAR)", "Deductible?", "Notes"],
+    rows: items.map(e => [
+      e.date,
+      e.description,
+      e.category,
+      fmtMoneyDecimal(e.cost),
+      deductibleCats.has(e.category) ? "Potentially" : "No",
+      e.note ?? "",
+    ]),
+    summary: [
+      `Total expenses: ${fmtMoneyDecimal(total)}`,
+      `Potentially deductible (Business/Health/Travel/Subs): ${fmtMoneyDecimal(potentialDeductible)}`,
+      `Tax year: ${ty - 1}/${ty}`,
+      "Consult a SARS-registered tax practitioner before claiming deductions.",
+    ],
+  };
+}
+
+export function buildSARSSummaryReport(
+  incomes: IncomeEntry[],
+  expenses: ExpenseEntry[],
+  endYear?: number,
+): ReportTable {
+  const ty = endYear ?? sarsTaxYear();
+  const inc = incomes.filter(i => inSarsTaxYear(i.date, ty));
+  const exp = expenses.filter(e => inSarsTaxYear(e.date, ty));
+  const totalIncome = inc.reduce((a, i) => a + i.amount, 0);
+  const totalExpenses = exp.reduce((a, e) => a + e.cost, 0);
+
+  const MONTHS_SA = ["Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec","Jan","Feb"];
+  const rows: (string | number)[][] = [];
+  for (let i = 0; i < 12; i++) {
+    const mIdx = (2 + i) % 12; // Mar=2, Apr=3,...Feb=1
+    const yr = mIdx >= 2 ? ty - 1 : ty;
+    const ym = `${yr}-${String(mIdx + 1).padStart(2, "0")}`;
+    const mInc = inc.filter(x => x.date.startsWith(ym)).reduce((a, x) => a + x.amount, 0);
+    const mExp = exp.filter(x => x.date.startsWith(ym)).reduce((a, x) => a + x.cost, 0);
+    if (mInc === 0 && mExp === 0) continue;
+    rows.push([
+      `${MONTHS_SA[i]} ${yr}`,
+      fmtMoneyDecimal(mInc),
+      fmtMoneyDecimal(mExp),
+      fmtMoneyDecimal(mInc - mExp),
+    ]);
+  }
+
+  return {
+    title: "SARS Tax Summary",
+    period: `Tax Year ${ty - 1}/${ty}`,
+    columns: ["Month", "Income (ZAR)", "Expenses (ZAR)", "Net (ZAR)"],
+    rows,
+    summary: [
+      `Gross income for the year: ${fmtMoneyDecimal(totalIncome)}`,
+      `Total expenses: ${fmtMoneyDecimal(totalExpenses)}`,
+      `Net cash flow: ${fmtMoneyDecimal(totalIncome - totalExpenses)}`,
+      `Tax year: 1 March ${ty - 1} – 28 February ${ty}`,
+      "For submission purposes, verify with a registered SARS tax practitioner.",
+    ],
+  };
+}
+
 /* ---------------- Export formats ---------------- */
 
 function slug(s: string) {

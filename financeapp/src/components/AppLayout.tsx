@@ -1,7 +1,7 @@
 import { Link, Outlet, useLocation, useNavigate } from "@tanstack/react-router";
 import {
   LayoutDashboard, DollarSign, Briefcase, Repeat, Receipt, BarChart3,
-  TrendingUp, FileText, Sparkles, Menu, X, Search, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, Shield,
+  TrendingUp, FileText, Sparkles, Menu, X, Search, LogOut, LineChart, Wallet, History, Tag, UserCog, Target, Shield, CalendarDays, Bot,
 } from "lucide-react";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -26,6 +26,8 @@ const nav = [
   { to: "/past-finances", label: "Past Finances", icon: History },
   { to: "/categories", label: "Categories", icon: Tag },
   { to: "/wealth-shield", label: "Wealth Shield", icon: Shield },
+  { to: "/bill-calendar", label: "Bill Calendar", icon: CalendarDays },
+  { to: "/ai-negotiator", label: "AI Negotiator", icon: Bot },
 ] as const;
 
 export function AppLayout() {

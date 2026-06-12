@@ -9,6 +9,9 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as WealthShieldRouteImport } from './routes/wealth-shield'
+import { Route as BillCalendarRouteImport } from './routes/bill-calendar'
+import { Route as AiNegotiatorRouteImport } from './routes/ai-negotiator'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PipelineRouteImport } from './routes/pipeline'
@@ -32,6 +35,21 @@ import { Route as PastFinancesIdRouteImport } from './routes/past-finances.$id'
 import { Route as BusinessesIdRouteImport } from './routes/businesses.$id'
 import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 
+const WealthShieldRoute = WealthShieldRouteImport.update({
+  id: '/wealth-shield',
+  path: '/wealth-shield',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const BillCalendarRoute = BillCalendarRouteImport.update({
+  id: '/bill-calendar',
+  path: '/bill-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiNegotiatorRoute = AiNegotiatorRouteImport.update({
+  id: '/ai-negotiator',
+  path: '/ai-negotiator',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
   id: '/subscriptions',
   path: '/subscriptions',
@@ -146,6 +164,9 @@ const AccountsIdRoute = AccountsIdRouteImport.update({
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
+  '/ai-negotiator': typeof AiNegotiatorRoute
+  '/bill-calendar': typeof BillCalendarRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/businesses': typeof BusinessesRouteWithChildren
@@ -170,6 +191,9 @@ export interface FileRoutesByFullPath {
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
+  '/ai-negotiator': typeof AiNegotiatorRoute
+  '/bill-calendar': typeof BillCalendarRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/businesses': typeof BusinessesRouteWithChildren
@@ -194,6 +218,9 @@ export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
+  '/ai-negotiator': typeof AiNegotiatorRoute
+  '/bill-calendar': typeof BillCalendarRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
   '/businesses': typeof BusinessesRouteWithChildren
@@ -220,6 +247,9 @@ export interface FileRouteTypes {
   fullPaths:
     | '/'
     | '/accounts'
+    | '/ai-negotiator'
+    | '/bill-calendar'
+    | '/wealth-shield'
     | '/analytics'
     | '/auth'
     | '/businesses'
@@ -244,6 +274,9 @@ export interface FileRouteTypes {
   to:
     | '/'
     | '/accounts'
+    | '/ai-negotiator'
+    | '/bill-calendar'
+    | '/wealth-shield'
     | '/analytics'
     | '/auth'
     | '/businesses'
@@ -267,6 +300,9 @@ export interface FileRouteTypes {
     | '__root__'
     | '/'
     | '/accounts'
+    | '/ai-negotiator'
+    | '/bill-calendar'
+    | '/wealth-shield'
     | '/analytics'
     | '/auth'
     | '/businesses'
@@ -292,6 +328,9 @@ export interface FileRouteTypes {
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRouteWithChildren
+  AiNegotiatorRoute: typeof AiNegotiatorRoute
+  BillCalendarRoute: typeof BillCalendarRoute
+  WealthShieldRoute: typeof WealthShieldRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
   BusinessesRoute: typeof BusinessesRouteWithChildren
@@ -312,6 +351,27 @@ export interface RootRouteChildren {
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/wealth-shield': {
+      id: '/wealth-shield'
+      path: '/wealth-shield'
+      fullPath: '/wealth-shield'
+      preLoaderRoute: typeof WealthShieldRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/bill-calendar': {
+      id: '/bill-calendar'
+      path: '/bill-calendar'
+      fullPath: '/bill-calendar'
+      preLoaderRoute: typeof BillCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-negotiator': {
+      id: '/ai-negotiator'
+      path: '/ai-negotiator'
+      fullPath: '/ai-negotiator'
+      preLoaderRoute: typeof AiNegotiatorRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/subscriptions': {
       id: '/subscriptions'
       path: '/subscriptions'
@@ -510,6 +570,9 @@ const PastFinancesRouteWithChildren = PastFinancesRoute._addFileChildren(
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRouteWithChildren,
+  AiNegotiatorRoute: AiNegotiatorRoute,
+  BillCalendarRoute: BillCalendarRoute,
+  WealthShieldRoute: WealthShieldRoute,
   AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
   BusinessesRoute: BusinessesRouteWithChildren,
