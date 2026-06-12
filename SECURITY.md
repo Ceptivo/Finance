@@ -49,7 +49,24 @@ rules to follow when extending it (especially for bank integrations like Plaid).
   and the _publishable_ anon key (safe by design — access is enforced by RLS).
 - Server-only secrets: `ANTHROPIC_API_KEY`, optional `FINNHUB_API_KEY`.
 
-## Rules for integrating Plaid (or any bank aggregator)
+## Plaid bank connections — how it's implemented
+
+- Bank login happens entirely inside Plaid Link (their iframe/script); this
+  app never sees usernames, passwords, or MFA codes.
+- The browser only ever receives a short-lived `link_token` and returns a
+  one-time `public_token`. The exchange to a long-lived `access_token`
+  happens server-side.
+- Access tokens live in `plaid_items`, a table with RLS enabled and **zero
+  policies** — no client (not even the row owner) can select or write it.
+  Only server functions using the service-role key touch it.
+- Transaction sync is idempotent (`plaid_transactions` dedupe table), and
+  AI categorization happens server-side on transaction names only.
+- Disconnecting a bank calls Plaid `/item/remove` (revokes at the source)
+  and scrubs the stored token.
+- Plaid endpoints allowed in CSP: `cdn.plaid.com` (script/frame) and
+  `*.plaid.com` (connect).
+
+## Rules for any future bank aggregator work
 
 1. **Access tokens are server-side only — no exceptions.** Plaid `access_token`s
    must never reach the browser, client state, logs, or error reports. Exchange

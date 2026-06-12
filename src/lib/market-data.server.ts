@@ -207,3 +207,37 @@ export async function searchMarketSymbols(query: string): Promise<SymbolMatch[]>
     return [];
   }
 }
+
+/** Recent news headlines for a symbol (Yahoo search news, no key; 15 min cache). */
+export interface NewsItem {
+  title: string;
+  publisher: string;
+  published: string;
+}
+
+export async function getNews(symbol: string): Promise<NewsItem[]> {
+  const key = `n:${symbol}`;
+  const hit = cached<NewsItem[]>(key, 15 * 60_000);
+  if (hit) return hit;
+  try {
+    const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(symbol)}&quotesCount=0&newsCount=25`;
+    const res = await fetch(url, { headers: UA, signal: AbortSignal.timeout(8000) });
+    if (!res.ok) return [];
+    const j = (await res.json()) as {
+      news?: Array<{ title?: string; publisher?: string; providerPublishTime?: number }>;
+    };
+    const items: NewsItem[] = (j.news ?? [])
+      .filter((n) => n.title)
+      .map((n) => ({
+        title: n.title!,
+        publisher: n.publisher ?? "unknown",
+        published: n.providerPublishTime
+          ? new Date(n.providerPublishTime * 1000).toISOString().slice(0, 10)
+          : "",
+      }));
+    store(key, items);
+    return items;
+  } catch {
+    return [];
+  }
+}

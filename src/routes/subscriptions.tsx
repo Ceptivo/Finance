@@ -8,6 +8,7 @@ import { fmtMoney } from "@/lib/format";
 import { Repeat, CalendarClock, TrendingUp, Bot, Plus, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { openAddModal } from "@/components/AddFAB";
+import { SubscriptionKiller } from "@/components/SubscriptionKiller";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 
 export const Route = createFileRoute("/subscriptions")({ component: SubsPage });
@@ -176,6 +177,7 @@ function SubsPage() {
           )}
         </div>
       </div>
+      <SubscriptionKiller />
     </>
   );
 }

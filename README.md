@@ -67,6 +67,22 @@ The paywall enforces automatically once `PAYSTACK_SECRET_KEY` is set
 `https://<your-domain>/api/paystack-webhook` in Paystack for auto-renewals.
 Live market data needs **no key at all** (Yahoo Finance).
 
+### Bank connections (Plaid)
+
+One-touch bank sync with AI auto-categorization (Premium feature):
+
+```sh
+PLAID_CLIENT_ID=...        # dashboard.plaid.com → Team Settings → Keys
+PLAID_SECRET=...           # sandbox or production secret
+PLAID_ENV=sandbox          # sandbox | development | production
+PLAID_COUNTRY_CODES=US,CA,GB   # optional
+SUPABASE_SERVICE_ROLE_KEY=...  # required (token storage is server-only)
+```
+
+Run the migration `supabase/migrations/20260612120000_plaid_bank_connections.sql`
+first. Users connect banks in **Settings → Bank connections**; the default
+currency is **ZAR** and each user can change theirs in Settings → Profile.
+
 ## Scripts
 
 | Command          | Description                  |

@@ -19,6 +19,11 @@ import { supabase } from "@/integrations/supabase/client";
 import { useSession } from "@/hooks/use-session";
 import { toast } from "sonner";
 import { AddFAB } from "@/components/AddFAB";
+import { useQuery } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { getProfile } from "@/lib/investment.functions";
+import { setActiveCurrency } from "@/lib/format";
+import { useEffect } from "react";
 import { GlobalSearch } from "@/components/GlobalSearch";
 import { SectionTabs } from "@/components/SectionTabs";
 
@@ -60,6 +65,14 @@ export function AppLayout() {
   const navigate = useNavigate();
   const { session } = useSession();
   const [open, setOpen] = useState(false);
+
+  // Apply the user's saved currency app-wide (defaults to ZAR).
+  const profFn = useServerFn(getProfile);
+  const profQ = useQuery({ queryKey: ["fin-profile"], queryFn: () => profFn(), staleTime: 60_000 });
+  const ccy = (profQ.data as any)?.profile?.currency;
+  useEffect(() => {
+    if (ccy) setActiveCurrency(ccy);
+  }, [ccy]);
 
   const initials = session?.user.email?.slice(0, 2).toUpperCase() ?? "ME";
 
@@ -121,13 +134,19 @@ export function AppLayout() {
         <div className="absolute bottom-0 inset-x-0 p-4 space-y-2">
           {session && (
             <div className="glass rounded-xl p-3 text-xs flex items-center gap-2">
-              <div className="size-8 rounded-full gradient-primary grid place-items-center text-[11px] font-semibold text-primary-foreground">
-                {initials}
-              </div>
-              <div className="min-w-0 flex-1">
-                <div className="font-medium truncate">{session.user.email}</div>
-                <div className="text-muted-foreground text-[10px]">Owner</div>
-              </div>
+              <Link
+                to="/settings"
+                onClick={() => setOpen(false)}
+                className="flex items-center gap-2 min-w-0 flex-1 hover:opacity-80 transition"
+              >
+                <div className="size-8 rounded-full gradient-primary grid place-items-center text-[11px] font-semibold text-primary-foreground">
+                  {initials}
+                </div>
+                <div className="min-w-0 flex-1">
+                  <div className="font-medium truncate">{session.user.email}</div>
+                  <div className="text-muted-foreground text-[10px]">Settings</div>
+                </div>
+              </Link>
               <button
                 onClick={logout}
                 className="p-1.5 rounded-md hover:bg-accent"
@@ -152,9 +171,13 @@ export function AppLayout() {
           </button>
           <GlobalSearch />
           <div className="flex-1 sm:hidden" />
-          <div className="size-9 rounded-full gradient-primary grid place-items-center text-xs font-semibold text-primary-foreground">
+          <Link
+            to="/settings"
+            aria-label="Open settings"
+            className="size-9 rounded-full gradient-primary grid place-items-center text-xs font-semibold text-primary-foreground hover:scale-105 transition"
+          >
             {initials}
-          </div>
+          </Link>
         </header>
 
         <main className="p-4 lg:p-8 animate-fade-in">

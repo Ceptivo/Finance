@@ -10,6 +10,7 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
+import { Route as SettingsRouteImport } from './routes/settings'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PremiumRouteImport } from './routes/premium'
 import { Route as PipelineRouteImport } from './routes/pipeline'
@@ -38,6 +39,11 @@ import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
   id: '/subscriptions',
   path: '/subscriptions',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
   getParentRoute: () => rootRouteImport,
 } as any)
 const ReportsRoute = ReportsRouteImport.update({
@@ -181,6 +187,7 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof PipelineRoute
   '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
@@ -207,6 +214,7 @@ export interface FileRoutesByTo {
   '/pipeline': typeof PipelineRoute
   '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
@@ -235,6 +243,7 @@ export interface FileRoutesById {
   '/pipeline': typeof PipelineRoute
   '/premium': typeof PremiumRoute
   '/reports': typeof ReportsRoute
+  '/settings': typeof SettingsRoute
   '/subscriptions': typeof SubscriptionsRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/api/paystack-webhook': typeof ApiPaystackWebhookRoute
@@ -264,6 +273,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/premium'
     | '/reports'
+    | '/settings'
     | '/subscriptions'
     | '/accounts/$id'
     | '/api/paystack-webhook'
@@ -290,6 +300,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/premium'
     | '/reports'
+    | '/settings'
     | '/subscriptions'
     | '/accounts/$id'
     | '/api/paystack-webhook'
@@ -317,6 +328,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/premium'
     | '/reports'
+    | '/settings'
     | '/subscriptions'
     | '/accounts/$id'
     | '/api/paystack-webhook'
@@ -345,6 +357,7 @@ export interface RootRouteChildren {
   PipelineRoute: typeof PipelineRoute
   PremiumRoute: typeof PremiumRoute
   ReportsRoute: typeof ReportsRoute
+  SettingsRoute: typeof SettingsRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
   ApiPaystackWebhookRoute: typeof ApiPaystackWebhookRoute
 }
@@ -356,6 +369,13 @@ declare module '@tanstack/react-router' {
       path: '/subscriptions'
       fullPath: '/subscriptions'
       preLoaderRoute: typeof SubscriptionsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/reports': {
@@ -587,6 +607,7 @@ const rootRouteChildren: RootRouteChildren = {
   PipelineRoute: PipelineRoute,
   PremiumRoute: PremiumRoute,
   ReportsRoute: ReportsRoute,
+  SettingsRoute: SettingsRoute,
   SubscriptionsRoute: SubscriptionsRoute,
   ApiPaystackWebhookRoute: ApiPaystackWebhookRoute,
 }

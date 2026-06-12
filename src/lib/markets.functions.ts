@@ -3,7 +3,7 @@ import { requireSupabaseAuth } from "@/integrations/supabase/auth-middleware";
 import { z } from "zod";
 import { aiPrompt, parseJsonReply } from "./ai.server";
 import { requirePremium } from "./premium.server";
-import { getQuote, getQuotes, getHistory } from "./market-data.server";
+import { getQuote, getQuotes, getHistory, getNews } from "./market-data.server";
 
 /* ---------------- Live quotes (Yahoo Finance, no API key needed) ---------------- */
 
@@ -272,4 +272,77 @@ Important: This is educational content only — never financial advice.`;
       parsed = { ideas: [], marketContext: "AI response could not be parsed. Try refreshing." };
     }
     return { ...parsed, generatedAt: new Date().toISOString() };
+  });
+
+/* ---------------- Market sentiment ("the vibe") ---------------- */
+
+const sentimentCache = new Map<string, { at: number; value: unknown }>();
+
+/**
+ * AI sentiment score for a symbol from recent news headlines.
+ * Confidence threshold: below 85 the UI shows "still analyzing" instead of
+ * a recommendation — sentiment is context, never a crystal ball.
+ */
+export const getMarketSentiment = createServerFn({ method: "POST" })
+  .middleware([requireSupabaseAuth])
+  .inputValidator((d: unknown) => z.object({ symbol: z.string().min(1).max(40) }).parse(d))
+  .handler(async ({ data, context }) => {
+    await requirePremium(context.supabase, context.userId, (context as any).claims);
+
+    const symbol = data.symbol.toUpperCase();
+    const hit = sentimentCache.get(symbol);
+    if (hit && Date.now() - hit.at < 30 * 60_000) return hit.value as any;
+
+    const [news, quote] = await Promise.all([getNews(symbol), getQuote(symbol)]);
+    if (news.length < 3) {
+      return {
+        symbol,
+        available: false,
+        message: "Not enough recent news coverage to read the sentiment for this symbol.",
+      };
+    }
+
+    const prompt = `You are a market sentiment analyst. Today is ${new Date().toISOString().slice(0, 10)}.
+Symbol: ${symbol}${quote ? ` (price ${quote.price}, ${quote.changePct.toFixed(2)}% today)` : ""}
+
+Recent headlines (newest first):
+${news.map((n) => `- [${n.published}] ${n.title} (${n.publisher})`).join("\n")}
+
+Score the crowd sentiment. Return STRICT minified JSON only:
+{
+ "score": number 0-100,           // 0 = extreme fear, 50 = neutral, 100 = extreme greed/hype
+ "label": "Fearful"|"Cautious"|"Neutral"|"Optimistic"|"Greedy",
+ "confidence": number 0-100,      // how confident you are given the evidence
+ "summary": "2-3 sentences on WHY the sentiment is what it is",
+ "signals": ["3-5 short bullet observations from the headlines"],
+ "hypeWarning": boolean           // true ONLY if score >= 85 (peak-hype territory)
+}
+Educational context only — never financial advice.`;
+
+    const text = await aiPrompt(prompt, undefined, undefined, context.userId);
+    let parsed: any;
+    try {
+      parsed = parseJsonReply(text);
+    } catch {
+      return { symbol, available: false, message: "Sentiment analysis failed — try again." };
+    }
+
+    const confidence = Math.max(0, Math.min(100, Number(parsed.confidence) || 0));
+    const result = {
+      symbol,
+      available: true,
+      score: Math.max(0, Math.min(100, Number(parsed.score) || 50)),
+      label: String(parsed.label ?? "Neutral"),
+      confidence,
+      // Below the 85% confidence threshold we ship the analysis but no stance.
+      confident: confidence >= 85,
+      summary: String(parsed.summary ?? ""),
+      signals: Array.isArray(parsed.signals) ? parsed.signals.slice(0, 6).map(String) : [],
+      hypeWarning: !!parsed.hypeWarning && (Number(parsed.score) || 0) >= 85,
+      headlineCount: news.length,
+      generatedAt: new Date().toISOString(),
+    };
+    sentimentCache.set(symbol, { at: Date.now(), value: result });
+    if (sentimentCache.size > 200) sentimentCache.clear();
+    return result;
   });

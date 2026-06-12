@@ -20,6 +20,7 @@ import {
 import { getLiveMarkets, getInvestmentIdeas, getPortfolioHistory, refreshHoldingValues } from "@/lib/markets.functions";
 import { searchSymbols, listCustomMarkets, addCustomMarket, updateCustomMarket, deleteCustomMarket } from "@/lib/custom-markets.functions";
 import { ProfitCalculator } from "@/components/ProfitCalculator";
+import { SentimentCard } from "@/components/SentimentCard";
 
 export const Route = createFileRoute("/investments")({
   component: InvestmentsPage,
@@ -868,6 +869,8 @@ function MarketTab() {
       </div>
 
       <CustomMarketsPanel />
+
+      <SentimentCard />
 
 
       {/* Potential profits — AI ideas */}

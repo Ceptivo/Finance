@@ -21,10 +21,12 @@ import { toast } from "sonner";
 
 export const Route = createFileRoute("/premium")({
   component: PremiumPage,
-  validateSearch: (s: Record<string, unknown>) => ({
-    reference: typeof s.reference === "string" ? s.reference : undefined,
-    trxref: typeof s.trxref === "string" ? s.trxref : undefined,
-  }),
+  validateSearch: (s: Record<string, unknown>) => {
+    const out: { reference?: string; trxref?: string } = {};
+    if (typeof s.reference === "string") out.reference = s.reference;
+    if (typeof s.trxref === "string") out.trxref = s.trxref;
+    return out;
+  },
 });
 
 const AI_FEATURES = [
