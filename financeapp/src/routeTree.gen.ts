@@ -10,9 +10,6 @@
 
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as WealthShieldRouteImport } from './routes/wealth-shield'
-import { Route as ChallengesRouteImport } from './routes/challenges'
-import { Route as BillCalendarRouteImport } from './routes/bill-calendar'
-import { Route as AiNegotiatorRouteImport } from './routes/ai-negotiator'
 import { Route as SubscriptionsRouteImport } from './routes/subscriptions'
 import { Route as ReportsRouteImport } from './routes/reports'
 import { Route as PipelineRouteImport } from './routes/pipeline'
@@ -24,11 +21,14 @@ import { Route as FinancialProfileRouteImport } from './routes/financial-profile
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as EarningsRouteImport } from './routes/earnings'
 import { Route as ClientsRouteImport } from './routes/clients'
+import { Route as ChallengesRouteImport } from './routes/challenges'
 import { Route as CeptivoRouteImport } from './routes/ceptivo'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as BusinessesRouteImport } from './routes/businesses'
+import { Route as BillCalendarRouteImport } from './routes/bill-calendar'
 import { Route as AuthRouteImport } from './routes/auth'
 import { Route as AnalyticsRouteImport } from './routes/analytics'
+import { Route as AiNegotiatorRouteImport } from './routes/ai-negotiator'
 import { Route as AccountsRouteImport } from './routes/accounts'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as PastFinancesIndexRouteImport } from './routes/past-finances.index'
@@ -36,24 +36,9 @@ import { Route as PastFinancesIdRouteImport } from './routes/past-finances.$id'
 import { Route as BusinessesIdRouteImport } from './routes/businesses.$id'
 import { Route as AccountsIdRouteImport } from './routes/accounts.$id'
 
-const ChallengesRoute = ChallengesRouteImport.update({
-  id: '/challenges',
-  path: '/challenges',
-  getParentRoute: () => rootRouteImport,
-} as any)
 const WealthShieldRoute = WealthShieldRouteImport.update({
   id: '/wealth-shield',
   path: '/wealth-shield',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const BillCalendarRoute = BillCalendarRouteImport.update({
-  id: '/bill-calendar',
-  path: '/bill-calendar',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const AiNegotiatorRoute = AiNegotiatorRouteImport.update({
-  id: '/ai-negotiator',
-  path: '/ai-negotiator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const SubscriptionsRoute = SubscriptionsRouteImport.update({
@@ -111,6 +96,11 @@ const ClientsRoute = ClientsRouteImport.update({
   path: '/clients',
   getParentRoute: () => rootRouteImport,
 } as any)
+const ChallengesRoute = ChallengesRouteImport.update({
+  id: '/challenges',
+  path: '/challenges',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const CeptivoRoute = CeptivoRouteImport.update({
   id: '/ceptivo',
   path: '/ceptivo',
@@ -126,6 +116,11 @@ const BusinessesRoute = BusinessesRouteImport.update({
   path: '/businesses',
   getParentRoute: () => rootRouteImport,
 } as any)
+const BillCalendarRoute = BillCalendarRouteImport.update({
+  id: '/bill-calendar',
+  path: '/bill-calendar',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const AuthRoute = AuthRouteImport.update({
   id: '/auth',
   path: '/auth',
@@ -134,6 +129,11 @@ const AuthRoute = AuthRouteImport.update({
 const AnalyticsRoute = AnalyticsRouteImport.update({
   id: '/analytics',
   path: '/analytics',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const AiNegotiatorRoute = AiNegotiatorRouteImport.update({
+  id: '/ai-negotiator',
+  path: '/ai-negotiator',
   getParentRoute: () => rootRouteImport,
 } as any)
 const AccountsRoute = AccountsRouteImport.update({
@@ -171,14 +171,13 @@ export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
-  '/bill-calendar': typeof BillCalendarRoute
-  '/challenges': typeof ChallengesRoute
-  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/bill-calendar': typeof BillCalendarRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
+  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -190,6 +189,7 @@ export interface FileRoutesByFullPath {
   '/pipeline': typeof PipelineRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
@@ -199,14 +199,13 @@ export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
-  '/bill-calendar': typeof BillCalendarRoute
-  '/challenges': typeof ChallengesRoute
-  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/bill-calendar': typeof BillCalendarRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
+  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -217,6 +216,7 @@ export interface FileRoutesByTo {
   '/pipeline': typeof PipelineRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
@@ -227,14 +227,13 @@ export interface FileRoutesById {
   '/': typeof IndexRoute
   '/accounts': typeof AccountsRouteWithChildren
   '/ai-negotiator': typeof AiNegotiatorRoute
-  '/bill-calendar': typeof BillCalendarRoute
-  '/challenges': typeof ChallengesRoute
-  '/wealth-shield': typeof WealthShieldRoute
   '/analytics': typeof AnalyticsRoute
   '/auth': typeof AuthRoute
+  '/bill-calendar': typeof BillCalendarRoute
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
+  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -246,6 +245,7 @@ export interface FileRoutesById {
   '/pipeline': typeof PipelineRoute
   '/reports': typeof ReportsRoute
   '/subscriptions': typeof SubscriptionsRoute
+  '/wealth-shield': typeof WealthShieldRoute
   '/accounts/$id': typeof AccountsIdRoute
   '/businesses/$id': typeof BusinessesIdRoute
   '/past-finances/$id': typeof PastFinancesIdRoute
@@ -257,14 +257,13 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/ai-negotiator'
-    | '/bill-calendar'
-    | '/challenges'
-    | '/wealth-shield'
     | '/analytics'
     | '/auth'
+    | '/bill-calendar'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
+    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -276,6 +275,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/reports'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/businesses/$id'
     | '/past-finances/$id'
@@ -285,14 +285,13 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/ai-negotiator'
-    | '/bill-calendar'
-    | '/challenges'
-    | '/wealth-shield'
     | '/analytics'
     | '/auth'
+    | '/bill-calendar'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
+    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -303,6 +302,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/reports'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/businesses/$id'
     | '/past-finances/$id'
@@ -312,14 +312,13 @@ export interface FileRouteTypes {
     | '/'
     | '/accounts'
     | '/ai-negotiator'
-    | '/bill-calendar'
-    | '/challenges'
-    | '/wealth-shield'
     | '/analytics'
     | '/auth'
+    | '/bill-calendar'
     | '/businesses'
     | '/categories'
     | '/ceptivo'
+    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -331,6 +330,7 @@ export interface FileRouteTypes {
     | '/pipeline'
     | '/reports'
     | '/subscriptions'
+    | '/wealth-shield'
     | '/accounts/$id'
     | '/businesses/$id'
     | '/past-finances/$id'
@@ -341,14 +341,13 @@ export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   AccountsRoute: typeof AccountsRouteWithChildren
   AiNegotiatorRoute: typeof AiNegotiatorRoute
-  BillCalendarRoute: typeof BillCalendarRoute
-  ChallengesRoute: typeof ChallengesRoute
-  WealthShieldRoute: typeof WealthShieldRoute
   AnalyticsRoute: typeof AnalyticsRoute
   AuthRoute: typeof AuthRoute
+  BillCalendarRoute: typeof BillCalendarRoute
   BusinessesRoute: typeof BusinessesRouteWithChildren
   CategoriesRoute: typeof CategoriesRoute
   CeptivoRoute: typeof CeptivoRoute
+  ChallengesRoute: typeof ChallengesRoute
   ClientsRoute: typeof ClientsRoute
   EarningsRoute: typeof EarningsRoute
   ExpensesRoute: typeof ExpensesRoute
@@ -360,6 +359,7 @@ export interface RootRouteChildren {
   PipelineRoute: typeof PipelineRoute
   ReportsRoute: typeof ReportsRoute
   SubscriptionsRoute: typeof SubscriptionsRoute
+  WealthShieldRoute: typeof WealthShieldRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -369,27 +369,6 @@ declare module '@tanstack/react-router' {
       path: '/wealth-shield'
       fullPath: '/wealth-shield'
       preLoaderRoute: typeof WealthShieldRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/bill-calendar': {
-      id: '/bill-calendar'
-      path: '/bill-calendar'
-      fullPath: '/bill-calendar'
-      preLoaderRoute: typeof BillCalendarRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/challenges': {
-      id: '/challenges'
-      path: '/challenges'
-      fullPath: '/challenges'
-      preLoaderRoute: typeof ChallengesRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/ai-negotiator': {
-      id: '/ai-negotiator'
-      path: '/ai-negotiator'
-      fullPath: '/ai-negotiator'
-      preLoaderRoute: typeof AiNegotiatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/subscriptions': {
@@ -469,6 +448,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ClientsRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/challenges': {
+      id: '/challenges'
+      path: '/challenges'
+      fullPath: '/challenges'
+      preLoaderRoute: typeof ChallengesRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/ceptivo': {
       id: '/ceptivo'
       path: '/ceptivo'
@@ -490,6 +476,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof BusinessesRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/bill-calendar': {
+      id: '/bill-calendar'
+      path: '/bill-calendar'
+      fullPath: '/bill-calendar'
+      preLoaderRoute: typeof BillCalendarRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/auth': {
       id: '/auth'
       path: '/auth'
@@ -502,6 +495,13 @@ declare module '@tanstack/react-router' {
       path: '/analytics'
       fullPath: '/analytics'
       preLoaderRoute: typeof AnalyticsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/ai-negotiator': {
+      id: '/ai-negotiator'
+      path: '/ai-negotiator'
+      fullPath: '/ai-negotiator'
+      preLoaderRoute: typeof AiNegotiatorRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/accounts': {
@@ -591,14 +591,13 @@ const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   AccountsRoute: AccountsRouteWithChildren,
   AiNegotiatorRoute: AiNegotiatorRoute,
-  BillCalendarRoute: BillCalendarRoute,
-  ChallengesRoute: ChallengesRoute,
-  WealthShieldRoute: WealthShieldRoute,
   AnalyticsRoute: AnalyticsRoute,
   AuthRoute: AuthRoute,
+  BillCalendarRoute: BillCalendarRoute,
   BusinessesRoute: BusinessesRouteWithChildren,
   CategoriesRoute: CategoriesRoute,
   CeptivoRoute: CeptivoRoute,
+  ChallengesRoute: ChallengesRoute,
   ClientsRoute: ClientsRoute,
   EarningsRoute: EarningsRoute,
   ExpensesRoute: ExpensesRoute,
@@ -610,6 +609,7 @@ const rootRouteChildren: RootRouteChildren = {
   PipelineRoute: PipelineRoute,
   ReportsRoute: ReportsRoute,
   SubscriptionsRoute: SubscriptionsRoute,
+  WealthShieldRoute: WealthShieldRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
