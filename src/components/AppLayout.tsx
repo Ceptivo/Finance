@@ -98,7 +98,7 @@ export function AppLayout() {
             <Sparkles className="size-4 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <div className="font-semibold tracking-tight">Finance Hub</div>
+            <div className="font-semibold tracking-tight">Ceptivo Finance App</div>
             <div className="text-[11px] text-muted-foreground">Personal · Private</div>
           </div>
         </div>

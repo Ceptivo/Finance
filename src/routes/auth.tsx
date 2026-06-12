@@ -51,7 +51,7 @@ function AuthPage() {
             <Sparkles className="size-5 text-primary-foreground" />
           </div>
           <div className="leading-tight">
-            <div className="font-semibold tracking-tight">Personal Finance Hub</div>
+            <div className="font-semibold tracking-tight">Personal Ceptivo Finance App</div>
             <div className="text-[11px] text-muted-foreground">Private · single owner</div>
           </div>
         </div>

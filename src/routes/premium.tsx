@@ -119,7 +119,7 @@ function PremiumPage() {
                 <Crown className="size-5 text-primary-foreground" />
               </div>
               <div>
-                <div className="font-semibold text-lg leading-tight">Finance Hub Premium</div>
+                <div className="font-semibold text-lg leading-tight">Ceptivo Finance App Premium</div>
                 <div className="text-xs text-muted-foreground">
                   All AI features · cancel anytime
                 </div>

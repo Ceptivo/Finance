@@ -56,7 +56,7 @@ export interface PlaidTxn {
 export async function createLinkToken(userId: string): Promise<string> {
   const r = await plaidFetch<{ link_token: string }>("/link/token/create", {
     user: { client_user_id: userId },
-    client_name: "Finance Hub",
+    client_name: "Ceptivo Finance App",
     products: ["transactions"],
     country_codes: (process.env.PLAID_COUNTRY_CODES ?? "US,CA,GB").split(","),
     language: "en",
