@@ -21,7 +21,6 @@ import { Route as FinancialProfileRouteImport } from './routes/financial-profile
 import { Route as ExpensesRouteImport } from './routes/expenses'
 import { Route as EarningsRouteImport } from './routes/earnings'
 import { Route as ClientsRouteImport } from './routes/clients'
-import { Route as ChallengesRouteImport } from './routes/challenges'
 import { Route as CeptivoRouteImport } from './routes/ceptivo'
 import { Route as CategoriesRouteImport } from './routes/categories'
 import { Route as BusinessesRouteImport } from './routes/businesses'
@@ -94,11 +93,6 @@ const EarningsRoute = EarningsRouteImport.update({
 const ClientsRoute = ClientsRouteImport.update({
   id: '/clients',
   path: '/clients',
-  getParentRoute: () => rootRouteImport,
-} as any)
-const ChallengesRoute = ChallengesRouteImport.update({
-  id: '/challenges',
-  path: '/challenges',
   getParentRoute: () => rootRouteImport,
 } as any)
 const CeptivoRoute = CeptivoRouteImport.update({
@@ -177,7 +171,6 @@ export interface FileRoutesByFullPath {
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
-  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -205,7 +198,6 @@ export interface FileRoutesByTo {
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
-  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -233,7 +225,6 @@ export interface FileRoutesById {
   '/businesses': typeof BusinessesRouteWithChildren
   '/categories': typeof CategoriesRoute
   '/ceptivo': typeof CeptivoRoute
-  '/challenges': typeof ChallengesRoute
   '/clients': typeof ClientsRoute
   '/earnings': typeof EarningsRoute
   '/expenses': typeof ExpensesRoute
@@ -263,7 +254,6 @@ export interface FileRouteTypes {
     | '/businesses'
     | '/categories'
     | '/ceptivo'
-    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -291,7 +281,6 @@ export interface FileRouteTypes {
     | '/businesses'
     | '/categories'
     | '/ceptivo'
-    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -318,7 +307,6 @@ export interface FileRouteTypes {
     | '/businesses'
     | '/categories'
     | '/ceptivo'
-    | '/challenges'
     | '/clients'
     | '/earnings'
     | '/expenses'
@@ -347,7 +335,6 @@ export interface RootRouteChildren {
   BusinessesRoute: typeof BusinessesRouteWithChildren
   CategoriesRoute: typeof CategoriesRoute
   CeptivoRoute: typeof CeptivoRoute
-  ChallengesRoute: typeof ChallengesRoute
   ClientsRoute: typeof ClientsRoute
   EarningsRoute: typeof EarningsRoute
   ExpensesRoute: typeof ExpensesRoute
@@ -446,13 +433,6 @@ declare module '@tanstack/react-router' {
       path: '/clients'
       fullPath: '/clients'
       preLoaderRoute: typeof ClientsRouteImport
-      parentRoute: typeof rootRouteImport
-    }
-    '/challenges': {
-      id: '/challenges'
-      path: '/challenges'
-      fullPath: '/challenges'
-      preLoaderRoute: typeof ChallengesRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/ceptivo': {
@@ -597,7 +577,6 @@ const rootRouteChildren: RootRouteChildren = {
   BusinessesRoute: BusinessesRouteWithChildren,
   CategoriesRoute: CategoriesRoute,
   CeptivoRoute: CeptivoRoute,
-  ChallengesRoute: ChallengesRoute,
   ClientsRoute: ClientsRoute,
   EarningsRoute: EarningsRoute,
   ExpensesRoute: ExpensesRoute,
